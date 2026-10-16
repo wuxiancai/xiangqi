@@ -50,3 +50,4 @@
 .last-move-origin-ring{fill:none;stroke:#fff;stroke-width:1.8;opacity:.85;filter:drop-shadow(0 0 4px #fff);pointer-events:none}
 .last-move-origin{fill:#fff;filter:drop-shadow(0 0 5px #fff);pointer-events:none}
 .last-move-destination{fill:none;stroke:#fff;stroke-width:2.4;opacity:.94;filter:drop-shadow(0 0 5px #fff);pointer-events:none}
+.import-dialog textarea{width:100%;resize:vertical;min-height:180px;border:1px solid var(--line);border-radius:8px;background:#fffefa;padding:10px;color:#48534b;font:12px/1.7 ui-monospace,SFMono-Regular,monospace}.import-dialog .settings-warning{overflow-wrap:anywhere}.import-privacy{font-size:10px;line-height:1.7;color:#8a9189}

@@ -21,7 +21,7 @@
 
     <main>
       <section id="study-view" class="view active">
-        <div class="page-heading"><div><p class="eyebrow">STUDY LIBRARY</p><h1>从一着棋，读懂整盘棋</h1><p class="subtitle">导入棋谱，逐步回放关键变化。</p></div><label class="import-button">导入 JSON 棋谱<input id="import-file" type="file" accept=".json,application/json" hidden></label></div>
+        <div class="page-heading"><div><p class="eyebrow">STUDY LIBRARY</p><h1>从一着棋，读懂整盘棋</h1><p class="subtitle">导入棋谱，逐步回放关键变化。</p></div><label class="import-button">导入棋谱<input id="import-file" type="file" accept=".json,.txt,.md,.pgn,.iccs,.fen,.cpx,.doc,.docx,.pdf,.png,.jpg,.jpeg,.webp,.bmp,.tif,.tiff,application/json,text/plain,text/markdown,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/*" hidden></label></div>
         <div class="study-layout">
           <aside class="library-panel panel">
             <div class="panel-title"><div><h2>棋谱库</h2><span id="library-count" class="muted">0 盘</span></div><button id="export-button" class="icon-button" aria-label="导出本机数据" title="导出本机数据">↥</button></div>
@@ -29,7 +29,7 @@
             <div class="filter-list" id="category-filters" aria-label="棋谱分类"></div>
             <div id="game-list" class="game-list"></div>
             <div id="empty-library" class="empty-state"><span class="empty-icon">棋</span><strong>棋谱库还空着</strong><p>内置棋谱将在来源与授权核实后加入。你可以导入符合规范的 JSON 棋谱开始学习。</p></div>
-            <p class="source-note">棋谱规范：xiangqi-study/v1 · 最大 2 MiB</p>
+            <p class="source-note">支持 JSON、TXT、MD、PGN、ICCS、FEN、DOCX、PDF 和图片 · 最大 2 MiB</p>
           </aside>
 
           <section class="study-board-column">
@@ -77,6 +77,7 @@
   </div>
 
   <dialog id="settings-dialog" class="settings-dialog"><form method="dialog"><div class="dialog-heading"><div><p class="eyebrow">PREFERENCES</p><h2>设置</h2></div><button class="icon-button" value="cancel" aria-label="关闭">×</button></div><p class="settings-warning">API 密钥仅保存在此浏览器本地。浏览器直连供应商会暴露密钥，并受其跨域策略限制。请勿在公用设备保存密钥。</p><label class="field-label">兼容接口地址<input id="api-url" type="url" placeholder="https://api.example.com/v1"></label><label class="field-label">模型名称<input id="api-model" type="text" placeholder="模型名称"></label><label class="field-label">API 密钥<input id="api-key" type="password" autocomplete="off" placeholder="sk-…"></label><div class="dialog-actions"><button id="clear-key" class="text-button" type="button">清除本机密钥</button><button id="clear-data" class="text-button" type="button">清除本机数据</button><button id="save-settings" class="primary-button" value="default">保存设置</button></div></form></dialog>
+  <dialog id="import-dialog" class="settings-dialog import-dialog"><form method="dialog"><div class="dialog-heading"><div><p class="eyebrow">REVIEW IMPORT</p><h2>检查并转换棋谱</h2></div><button class="icon-button" value="cancel" aria-label="关闭">×</button></div><p id="import-status" class="settings-warning">检查识别出的棋谱文本；图片和扫描版 PDF 的 OCR 可能需要修正。</p><label class="field-label">棋谱名称<input id="import-title" type="text" maxlength="120"></label><label class="field-label">识别文本（可编辑）<textarea id="import-text" rows="12" spellcheck="false"></textarea></label><p class="import-privacy">文档内容仅在本机浏览器提取和识别，不会上传。首次使用 PDF/OCR 需联网加载解析组件。</p><div class="dialog-actions"><button class="text-button" value="cancel">取消</button><button id="convert-import" class="primary-button" type="button">校验并导入</button></div></form></dialog>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <script type="module" src="./src/app.js"></script>
 </body>

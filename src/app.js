@@ -3,6 +3,7 @@ import { chooseLocalMoveAsync, requestSuggestion } from './ai.js';
 import { loadSettings, recordRepository, saveSettings } from './storage.js';
 import { chineseNotation } from './notation.js';
 import { adjudicateRepetition } from './repetition.js';
+import { convertTextToRecord, extractText } from './importer.js';
 
 const categories = ['古谱', '现代对局', '开局', '残局'];
 const labels = { K: '帥', A: '仕', E: '相', R: '車', H: '馬', C: '炮', P: '兵', k: '將', a: '士', e: '象', r: '車', h: '馬', c: '炮', p: '卒' };
@@ -246,7 +247,7 @@ async function refreshRecords() {
   renderLibrary();
 }
 
-async function importFile(file) {
+async function importJsonFile(file) {
   if (!file) return;
   if (file.size > 2 * 1024 * 1024) { toast('文件超过 2 MiB 上限'); return; }
   try {
@@ -269,6 +270,45 @@ async function importFile(file) {
     if (validated.length === 1) loadRecord(validated[0]);
     toast(`成功导入 ${validated.length} 盘棋谱`);
   } catch (error) { toast(`导入失败：${error.message}`); }
+}
+
+let pendingImportSource = '';
+async function importFile(file) {
+  if (!file) return;
+  if (file.name.toLowerCase().endsWith('.json')) return importJsonFile(file);
+  try {
+    $('#import-status').textContent = '正在提取棋谱内容…';
+    $('#import-text').value = '';
+    $('#import-title').value = file.name.replace(/\.[^.]+$/, '');
+    pendingImportSource = file.name;
+    $('#import-dialog').showModal();
+    const text = await extractText(file, (message) => { $('#import-status').textContent = message; });
+    $('#import-text').value = text;
+    $('#import-status').textContent = '请检查识别文本；将按标准开局逐着匹配并验证合法性。';
+  } catch (error) {
+    $('#import-dialog').close();
+    toast(`读取失败：${error.message}`);
+  } finally {
+    $('#import-file').value = '';
+  }
+}
+
+async function convertAndImport() {
+  const button = $('#convert-import');
+  button.disabled = true;
+  try {
+    const record = convertTextToRecord($('#import-text').value, { title: $('#import-title').value, sourceName: pendingImportSource });
+    const normalized = { ...record, userImported: true };
+    if (state.records.some((item) => item.id === normalized.id)) throw new Error('棋谱 ID 已存在');
+    await recordRepository.put(normalized);
+    await refreshRecords();
+    loadRecord(normalized);
+    $('#import-dialog').close();
+    toast(`已转换并导入棋谱，共 ${normalized.moves.length} 着`);
+  } catch (error) {
+    $('#import-status').textContent = error.message;
+    toast(`转换失败：${error.message}`);
+  } finally { button.disabled = false; }
 }
 
 function downloadJson(value, filename) {
@@ -406,6 +446,7 @@ function bindEvents() {
   document.addEventListener('keydown', unlockMoveAudio);
   document.querySelectorAll('.nav-button').forEach((button) => button.addEventListener('click', () => setView(button.dataset.view)));
   $('#import-file').addEventListener('change', (event) => importFile(event.target.files[0]));
+  $('#convert-import').addEventListener('click', convertAndImport);
   $('#search-input').addEventListener('input', (event) => { state.query = event.target.value; renderLibrary(); });
   $('#export-button').addEventListener('click', exportRecords);
   $('#study-first').addEventListener('click', () => { stopPlayback(); state.studyPly = 0; renderStudyBoard(); });
