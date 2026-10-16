@@ -284,6 +284,7 @@ async function importXqfFolder(files) {
   const xqfCount = selectedFiles.filter((file) => /\.(xqf|cbl)$/i.test(file.name)).length;
   input.disabled = true;
   status.hidden = false;
+  status.title = '';
   if (!xqfCount) {
     status.textContent = '所选文件夹及子文件夹中没有 .xqf 或 .cbl 棋谱。';
     input.value = '';
@@ -292,7 +293,8 @@ async function importXqfFolder(files) {
   }
   try {
     const result = await importXqfFolderFiles(selectedFiles, state.records, ({ current, total, sourceName }) => {
-      status.textContent = `正在校验 ${current}/${total}：${sourceName}`;
+      status.title = sourceName;
+      status.textContent = `正在校验 ${current}/${total}：${sourceName.split(/[\\/]/).at(-1)}`;
     });
     if (result.records.length) {
       await recordRepository.putMany(result.records);
@@ -307,6 +309,7 @@ async function importXqfFolder(files) {
     status.textContent = `批量导入中止：${error.message}`;
     toast(`批量导入失败：${error.message}`);
   } finally {
+    status.title = '';
     input.value = '';
     input.disabled = false;
   }
