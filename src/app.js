@@ -85,6 +85,18 @@ function renderBoard(svg, board, flipped, onSquare, selected = null, hints = [],
   const rightRiver = svgElement('text', { x: 361, y: 258, class: 'board-river', 'text-anchor': 'middle' }); rightRiver.textContent = '漢 界'; svg.append(rightRiver);
   svg.append(svgElement('rect', { x: 161, y: 237, width: 128, height: 24, rx: 12, class: 'board-brand-pill' }));
   const brandText = svgElement('text', { x: 225, y: 255, class: 'board-brand', 'text-anchor': 'middle' }); brandText.textContent = '楚河漢界'; svg.append(brandText);
+  const redDigits = '一二三四五六七八九';
+  const topSide = flipped ? RED : BLACK;
+  const bottomSide = otherSide(topSide);
+  for (let file = 0; file < 9; file += 1) {
+    const boardFile = flipped ? 8 - file : file;
+    const topLabel = svgElement('text', { x: point(file, 0).x, y: 23, class: `board-coordinate ${topSide}`, 'text-anchor': 'middle', 'aria-hidden': 'true' });
+    topLabel.textContent = topSide === BLACK ? String(boardFile + 1) : redDigits[boardFile];
+    svg.append(topLabel);
+    const bottomLabel = svgElement('text', { x: point(file, 0).x, y: 485, class: `board-coordinate ${bottomSide}`, 'text-anchor': 'middle', 'aria-hidden': 'true' });
+    bottomLabel.textContent = bottomSide === BLACK ? String(9 - boardFile) : redDigits[8 - boardFile];
+    svg.append(bottomLabel);
+  }
   for (let square = 0; square < 90; square += 1) {
     const { file, rank } = mapSquare(square, flipped); const { x, y } = point(file, rank);
     if (lastMove && (square === lastMove.from || square === lastMove.to)) svg.append(svgElement('circle', { cx: x, cy: y, r: 21, class: 'last-move' }));
@@ -288,7 +300,7 @@ function renderPlayBoard() {
 function renderHistory() {
   const container = $('#play-history'); container.replaceChildren();
   if (!state.history.length) { const empty = document.createElement('span'); empty.className = 'move-empty'; empty.textContent = '棋局尚未开始'; container.append(empty); return; }
-  state.history.forEach(({ move, captured }, index) => {
+  state.history.forEach(({ move, captured, previousBoard, previousSide }, index) => {
     const item = document.createElement('span'); item.className = `history-ply${index === state.history.length - 1 ? ' active' : ''}`;
     const number = document.createElement('strong'); number.textContent = `${Math.floor(index / 2) + 1}${index % 2 ? '...' : '.'}`;
     const notation = document.createElement('span'); notation.textContent = `${chineseNotation(previousBoard, move, previousSide)}${captured ? ' ×' : ''}`;
