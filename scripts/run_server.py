@@ -1,7 +1,7 @@
 """Create a project-local virtualenv and serve the static application."""
 
 import os
-import subprocess
+import os
 import sys
 import venv
 from pathlib import Path
@@ -16,9 +16,9 @@ PORT = os.environ.get("PORT", "8000")
 def main():
     if not PYTHON.exists():
         venv.EnvBuilder(with_pip=False).create(ENV)
-    subprocess.run(
+    os.execv(
+        str(PYTHON),
         [str(PYTHON), "-m", "http.server", PORT, "--bind", "0.0.0.0", "--directory", str(ROOT)],
-        check=True,
     )
 
 

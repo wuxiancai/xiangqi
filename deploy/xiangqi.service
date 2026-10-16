@@ -4,10 +4,10 @@ After=network.target
 
 [Service]
 Type=simple
-User=xiangqi
-WorkingDirectory=/opt/xiangqi
-Environment=PORT=8000
-ExecStart=/usr/bin/python3 /opt/xiangqi/scripts/run_server.py
+User=__SERVICE_USER__
+WorkingDirectory=__PROJECT_DIR__
+Environment=PORT=__PORT__
+ExecStart=__PYTHON__ __PROJECT_DIR__/scripts/run_server.py
 Restart=on-failure
 RestartSec=3
 

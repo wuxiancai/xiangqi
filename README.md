@@ -4,13 +4,15 @@
 
 ## 本地运行
 
-在项目根目录启动服务（脚本会创建项目虚拟环境并监听 `0.0.0.0`）：
+上传项目目录到服务器后，在项目根目录一键部署（脚本会创建项目虚拟环境并监听 `0.0.0.0`）：
 
 ```sh
-python3 scripts/run_server.py
+python3 scripts/deploy.py
 ```
 
-默认端口 `8000`，可用 `PORT=8080` 修改。浏览器访问 `http://<主机地址>:8000`。ES modules、IndexedDB 和 Service Worker 需要 HTTP(S) 页面，直接用 `file://` 打开不受支持。Linux systemd 示例见 `deploy/xiangqi.service`，部署时须替换工作目录和运行用户。
+Linux（必须有 systemd）：`sudo python3 scripts/deploy.py`。macOS 使用 launchd，Windows 使用任务计划程序。默认端口 `8000`，Linux/macOS 可用 `PORT=8080` 修改。部署后浏览器访问 `http://<主机地址>:<端口>`。停止并禁用自启动：`python3 scripts/stop.py`；Linux 用 `sudo python3 scripts/stop.py`。停止不删除服务配置或项目文件；再次执行部署会重新启用并启动。ES modules、IndexedDB 和 Service Worker 需要 HTTP(S) 页面，直接用 `file://` 打开不受支持。
+
+Linux systemd 服务模板位于 `deploy/xiangqi.service`，部署脚本会按上传目录、运行用户和端口生成服务单元。`scripts/run_server.py` 可用于本机临时运行，但生产部署应使用 `deploy.py`，以确保服务受 systemd/launchd/任务计划管理。
 
 ## 验证
 
