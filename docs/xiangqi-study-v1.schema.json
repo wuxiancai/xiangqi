@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/xiangqi-study/v1.schema.json",
+  "title": "Xiangqi Study Record v1",
+  "type": "object",
+  "required": ["schema", "id", "title", "category", "players", "result", "source", "initialPosition", "moves", "annotations", "tags"],
+  "properties": {
+    "schema": { "const": "xiangqi-study/v1" },
+    "id": { "type": "string", "minLength": 1 },
+    "title": { "type": "string", "minLength": 1 },
+    "category": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "enum": ["古谱", "现代对局", "开局", "残局"] } },
+    "players": { "type": "object", "required": ["red", "black"], "properties": { "red": { "type": "string" }, "black": { "type": "string" } }, "additionalProperties": false },
+    "result": { "enum": ["红胜", "黑胜", "和棋", "未完"] },
+    "source": { "type": "object", "required": ["name", "rights"], "properties": { "name": { "type": "string" }, "url": { "type": "string" }, "rights": { "type": "string", "minLength": 1 } }, "additionalProperties": true },
+    "initialPosition": { "oneOf": [{ "const": "standard" }, { "type": "object", "required": ["fen"], "properties": { "fen": { "type": "string", "pattern": "^[rnbakcpRNBAKCP1-9]+/[rnbakcpRNBAKCP1-9]+/[rnbakcpRNBAKCP1-9]+/[rnbakcpRNBAKCP1-9]+/[rnbakcpRNBAKCP1-9]+/[rnbakcpRNBAKCP1-9]+/[rnbakcpRNBAKCP1-9]+/[rnbakcpRNBAKCP1-9]+/[rnbakcpRNBAKCP1-9]+/[rnbakcpRNBAKCP1-9]+ [wb](?: .*)?$" } }, "additionalProperties": false }] },
+    "moves": { "type": "array", "items": { "type": "object", "required": ["from", "to"], "properties": { "from": { "type": "string", "pattern": "^[a-i][0-9]$" }, "to": { "type": "string", "pattern": "^[a-i][0-9]$" } }, "additionalProperties": false } },
+    "annotations": { "type": "object", "propertyNames": { "pattern": "^[1-9][0-9]*$" }, "additionalProperties": { "type": "string", "maxLength": 50 } },
+    "tags": { "type": "array", "items": { "type": "string" } }
+  },
+  "additionalProperties": false
+}

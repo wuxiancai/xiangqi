@@ -3,7 +3,7 @@
 ## 已定
 
 - 首版是静态 HTML/CSS/JavaScript ES Modules 单页应用，默认 SVG 棋盘。
-- 棋规模块与视图分离；内部着法用结构化对象，棋谱持久化用版本化 `xiangqi-study/v1` JSON，坐标用 ICCS 起止坐标。
+- 棋规模块与视图分离；内部着法用结构化对象，棋谱持久化用版本化 `xiangqi-study/v1` JSON，坐标用 ICCS 起止坐标。初始局面支持标准开局或明确 side-to-move 的中国象棋 FEN，以表达残局题局。
 - 首版仅接受 UTF-8 JSON 棋谱；XQF、PGN、ICCS 文本留作独立适配器。PGN 不作为中国象棋原生规范。
 - 用户数据首版保存在 IndexedDB；存储通过 repository 接口隔离。后端和 PostgreSQL 仅在账号、跨设备同步、备份或协作需要时引入。
 - 首版内置棋谱不少于 100 盘，现代棋谱逐条登记来源与许可；未经授权核验的内容不发布。

@@ -1,0 +1,18 @@
+{
+  "schema": "xiangqi-study/v1",
+  "id": "example-opening-exchange-v1",
+  "title": "格式示例：中兵起步",
+  "category": ["开局"],
+  "players": { "red": "示例红方", "black": "示例黑方" },
+  "result": "未完",
+  "source": { "name": "楚河原创格式示例", "rights": "CC0-1.0；仅演示数据格式，不是古谱或历史对局" },
+  "initialPosition": "standard",
+  "moves": [
+    { "from": "e6", "to": "e5" },
+    { "from": "e3", "to": "e4" },
+    { "from": "b9", "to": "c7" },
+    { "from": "b0", "to": "c2" }
+  ],
+  "annotations": { "1": "中兵前进，争取中路空间。" },
+  "tags": ["格式示例", "非历史棋谱"]
+}

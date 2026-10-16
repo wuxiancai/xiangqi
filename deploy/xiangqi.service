@@ -1,0 +1,15 @@
+[Unit]
+Description=楚河中国象棋学习与对弈 Web 应用
+After=network.target
+
+[Service]
+Type=simple
+User=xiangqi
+WorkingDirectory=/opt/xiangqi
+Environment=PORT=8000
+ExecStart=/usr/bin/python3 /opt/xiangqi/scripts/run_server.py
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

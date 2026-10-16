@@ -1,0 +1,29 @@
+# 楚河：中国象棋学习与对弈
+
+纯静态 HTML/CSS/JavaScript 单页应用。棋盘以 SVG 绘制，规则、棋谱校验和基础 AI 搜索在浏览器本地运行。用户可导入 `xiangqi-study/v1` UTF-8 JSON 棋谱，文件上限 2 MiB；格式定义见 [JSON Schema](docs/xiangqi-study-v1.schema.json)，导入样例见 [格式示例](examples/xiangqi-study-v1.example.json)。样例是原创格式演示，不是古谱或历史对局。
+
+## 本地运行
+
+在项目根目录启动服务（脚本会创建项目虚拟环境并监听 `0.0.0.0`）：
+
+```sh
+python3 scripts/run_server.py
+```
+
+默认端口 `8000`，可用 `PORT=8080` 修改。浏览器访问 `http://<主机地址>:8000`。ES modules、IndexedDB 和 Service Worker 需要 HTTP(S) 页面，直接用 `file://` 打开不受支持。Linux systemd 示例见 `deploy/xiangqi.service`，部署时须替换工作目录和运行用户。
+
+## 验证
+
+```sh
+npm test
+```
+
+## 功能现状
+
+- 已实现标准初始局面、主要象棋走法、合法性、自将约束、将军/将死/困毙判断。
+- 已实现棋谱检索、分类、JSON 导入、逐着回放、自动播放和本地持久化。
+- 已实现本地双人、基础搜索 AI、兼容 Chat Completions API 的建议接口、着法合法性检查及本地降级。
+- 内置库当前收录 36 盘现代大师对局和 40 盘残局，共 76 盘，着法均通过规则校验。现代/残局数据源为 [Chinese Chess Practical Dataset（CC BY 4.0）](https://github.com/Yvonne761/Chinese-Chess-Practical-Dataset)，来源、版本和归属见 `data/ATTRIBUTION.md`。古谱《梅花谱》《橘中秘》《适情雅趣》尚未录入；100 盘首版目标未达成，不应将当前版本视为完整内容交付。
+- 首版导入仅支持 `xiangqi-study/v1` JSON（最大 2 MiB）；XQF、PGN、ICCS 文本解析仍延后。
+- 内置 AI 棋力未经认证；API 模型强度无法与引擎等级等同。API 密钥存于当前浏览器 IndexedDB，浏览器直连服务商存在密钥暴露与 CORS 限制。
+- 自托管静态文件可由 HTTPS 静态站点托管；首版无后端进程，因此无需 systemd 服务。

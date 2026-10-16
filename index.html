@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f3eee3">
+  <meta name="description" content="在浏览器中学习棋谱、练习中国象棋。">
+  <title>楚河 · 象棋学习与对弈</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="楚河首页"><span class="brand-mark">楚</span><span><strong>楚河</strong><small>象棋学习与对弈</small></span></a>
+      <nav class="main-nav" aria-label="主导航">
+        <button class="nav-button active" data-view="study">棋谱学习</button>
+        <button class="nav-button" data-view="play">开始对弈</button>
+      </nav>
+      <button id="settings-button" class="quiet-button">设置</button>
+    </header>
+
+    <main>
+      <section id="study-view" class="view active">
+        <div class="page-heading"><div><p class="eyebrow">STUDY LIBRARY</p><h1>从一着棋，读懂整盘棋</h1><p class="subtitle">导入棋谱，逐步回放关键变化。</p></div><label class="import-button">导入 JSON 棋谱<input id="import-file" type="file" accept=".json,application/json" hidden></label></div>
+        <div class="study-layout">
+          <aside class="library-panel panel">
+            <div class="panel-title"><div><h2>棋谱库</h2><span id="library-count" class="muted">0 盘</span></div><button id="export-button" class="icon-button" aria-label="导出本机数据" title="导出本机数据">↥</button></div>
+            <label class="search-box"><span aria-hidden="true">⌕</span><input id="search-input" type="search" placeholder="搜索棋谱、棋手"></label>
+            <div class="filter-list" id="category-filters" aria-label="棋谱分类"></div>
+            <div id="game-list" class="game-list"></div>
+            <div id="empty-library" class="empty-state"><span class="empty-icon">棋</span><strong>棋谱库还空着</strong><p>内置棋谱将在来源与授权核实后加入。你可以导入符合规范的 JSON 棋谱开始学习。</p></div>
+            <p class="source-note">棋谱规范：xiangqi-study/v1 · 最大 2 MiB</p>
+          </aside>
+
+          <section class="study-board-column">
+            <div class="board-header"><div><span class="live-dot"></span><span id="study-status">选择一盘棋谱开始</span></div><button id="study-flip" class="text-button">翻转棋盘</button></div>
+            <div class="board-frame"><svg id="study-board" class="chessboard" viewBox="0 0 450 500" role="grid" aria-label="中国象棋棋盘"></svg></div>
+            <div class="replay-panel panel">
+              <div class="replay-controls">
+                <button id="study-first" class="control-button" aria-label="跳到开局" title="跳到开局">|◀</button><button id="study-prev" class="control-button" aria-label="上一步" title="上一步">◀</button>
+                <button id="study-play" class="play-button" aria-label="自动播放" title="自动播放">▶</button>
+                <button id="study-next" class="control-button" aria-label="下一步" title="下一步">▶</button><button id="study-last" class="control-button" aria-label="跳到末尾" title="跳到末尾">▶|</button>
+              </div>
+              <label class="speed-control"><span>速度</span><input id="study-speed" type="range" min="250" max="5000" step="250" value="1200"><output id="speed-value">1.2 秒</output></label>
+              <div class="move-progress"><span id="move-counter">—</span><div class="progress-track"><span id="progress-fill"></span></div><span id="move-result">—</span></div>
+              <div id="annotation" class="annotation"><span class="annotation-mark">注</span><span>选中棋谱后，这里会显示关键着法说明。</span></div>
+            </div>
+          </section>
+          <aside class="moves-panel panel"><div class="panel-title"><div><h2>着法记录</h2><span id="players-label" class="muted">红方 · 黑方</span></div></div><div id="move-list" class="move-list"><div class="move-empty">着法将显示在这里</div></div><div id="study-source" class="study-source"></div></aside>
+        </div>
+      </section>
+
+      <section id="play-view" class="view">
+        <div class="page-heading"><div><p class="eyebrow">PLAY A GAME</p><h1>落子之间，见招拆招</h1><p class="subtitle">本地双人，或与你的 AI 服务对弈。</p></div></div>
+        <div class="play-layout">
+          <section class="play-board-column panel">
+            <div class="board-header"><div><span class="live-dot"></span><span id="play-status">红方走棋</span></div><button id="play-flip" class="text-button">翻转棋盘</button></div>
+            <div class="board-frame"><svg id="play-board" class="chessboard" viewBox="0 0 450 500" role="grid" aria-label="对弈棋盘"></svg></div>
+            <div class="play-actions"><button id="undo-button" class="secondary-button">悔棋</button><button id="restart-button" class="secondary-button">重新开始</button><button id="suggest-button" class="secondary-button">局势建议</button></div>
+            <div id="ai-output" class="ai-output" aria-live="polite">AI 建议仅供参考，所有推荐着法都会经过本地规则校验。</div>
+          </section>
+          <aside class="game-sidebar">
+            <section class="panel setup-panel"><div class="panel-title"><div><h2>对弈设置</h2><span class="muted">随时重新开始以应用设置</span></div></div>
+              <label class="field-label">对弈模式<select id="mode-select"><option value="local">本地双人</option><option value="ai">用户 vs AI</option></select></label>
+              <label class="field-label">你执哪方<select id="side-select"><option value="red">红方先行</option><option value="black">黑方后行</option></select></label>
+              <label class="field-label">AI 强度<select id="strength-select"><option value="beginner">入门 · 搜索 1 层</option><option value="club">业余 · 搜索 2 层</option><option value="advanced">高手 · 搜索 3 层</option><option value="max">最强 · 搜索 4 层</option></select></label>
+              <p class="disclaimer">内置 AI 为基础搜索策略，棋力未经认证。可在设置中配置兼容 API；不同模型的强度无法保证等价。</p>
+            </section>
+            <section class="panel history-panel"><div class="panel-title"><div><h2>本局着法</h2><span id="turn-label" class="muted">轮到红方</span></div></div><div id="play-history" class="play-history"><span class="move-empty">棋局尚未开始</span></div></section>
+          </aside>
+        </div>
+      </section>
+    </main>
+
+    <footer><span>楚河 · 棋盘与棋规运行在你的浏览器中</span><span id="storage-status">本地保存</span></footer>
+  </div>
+
+  <dialog id="settings-dialog" class="settings-dialog"><form method="dialog"><div class="dialog-heading"><div><p class="eyebrow">PREFERENCES</p><h2>设置</h2></div><button class="icon-button" value="cancel" aria-label="关闭">×</button></div><p class="settings-warning">API 密钥仅保存在此浏览器本地。浏览器直连供应商会暴露密钥，并受其跨域策略限制。请勿在公用设备保存密钥。</p><label class="field-label">兼容接口地址<input id="api-url" type="url" placeholder="https://api.example.com/v1"></label><label class="field-label">模型名称<input id="api-model" type="text" placeholder="模型名称"></label><label class="field-label">API 密钥<input id="api-key" type="password" autocomplete="off" placeholder="sk-…"></label><div class="dialog-actions"><button id="clear-key" class="text-button" type="button">清除本机密钥</button><button id="clear-data" class="text-button" type="button">清除本机数据</button><button id="save-settings" class="primary-button" value="default">保存设置</button></div></form></dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script type="module" src="./src/app.js"></script>
+</body>
+</html>
