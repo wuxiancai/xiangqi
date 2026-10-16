@@ -1,6 +1,18 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { BLACK, RED, capturablePieces, coord, fromICCS, initialBoard, isInCheck, legalMoves, gameStatus, applyMove, parseFEN, toICCS, validateAndReplay } from '../src/rules.js';
+import { adjudicateRepetition } from '../src/repetition.js';
+
+test('three repeated cycles of unilateral perpetual check lose, while mutual checking does not trigger this ruling', () => {
+  const trace = [{ key: 'A' }];
+  for (let cycle = 0; cycle < 3; cycle += 1) {
+    trace.push({ key: 'B', mover: RED, gaveCheck: true });
+    trace.push({ key: 'A', mover: BLACK, gaveCheck: false });
+  }
+  assert.deepEqual(adjudicateRepetition(trace), { over: true, loser: RED, winner: BLACK, reason: '长将判负' });
+  assert.equal(adjudicateRepetition(trace.slice(0, 5)), null);
+  assert.equal(adjudicateRepetition(trace.map((entry) => entry.mover === BLACK ? { ...entry, gaveCheck: true } : entry)), null);
+});
 
 function emptyBoard() { return Array(90).fill(null); }
 function put(board, file, rank, piece) { board[coord(file, rank)] = piece; }
