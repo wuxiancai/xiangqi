@@ -147,7 +147,7 @@ function renderMoveList() {
     for (const ply of [index + 1, index + 2]) {
       if (ply > moves.length) { const spacer = document.createElement('span'); container.append(spacer); continue; }
       const move = moves[ply - 1]; const side = ply % 2 ? state.currentRecord.initialSide ?? RED : otherSide(state.currentRecord.initialSide ?? RED);
-      const button = document.createElement('button'); button.className = `move-item${state.studyPly === ply ? ' active' : ''}`;
+      const button = document.createElement('button'); button.className = `move-item ${side}${state.studyPly === ply ? ' active' : ''}`;
       button.textContent = chineseNotation(state.currentRecord.positions[ply - 1], move, side);
       button.setAttribute('aria-label', `第 ${ply} 着，${button.textContent}`);
       button.onclick = () => { stopPlayback(); state.studyPly = ply; renderStudyBoard(); };
