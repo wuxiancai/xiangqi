@@ -1,6 +1,7 @@
 import { BLACK, RED, applyMove, initialBoard, legalMoves, otherSide, parseFEN, sideOf, toICCS, validateAndReplay } from './rules.js';
 import { chineseNotation } from './notation.js';
 import { parseXqf, xqfMovesAsText } from './xqf.js';
+import { cblMovesAsText, parseCbl } from './cbl.js';
 
 export const MAX_IMPORT_SIZE = 500 * 1024 * 1024;
 const tokenPattern = /[a-i][0-9][a-i][0-9]|(?:[前中后](?:车|車|马|馬|炮|兵|卒|帅|帥|将|將|相|象|仕|士)(?:进|進|退|平)[一二三四五六七八九1-9])|(?:(?:车|車|马|馬|炮|兵|卒|帅|帥|将|將|相|象|仕|士)[一二三四五六七八九1-9](?:进|進|退|平)[一二三四五六七八九1-9])/g;
@@ -13,6 +14,7 @@ export async function extractText(file, onProgress = () => {}) {
   const extension = file.name.split('.').at(-1).toLowerCase();
   if (extension === 'json') throw new Error('JSON 棋谱请使用 JSON 导入流程');
   if (extension === 'xqf') return xqfMovesAsText(parseXqf(await file.arrayBuffer(), file.name));
+  if (extension === 'cbl') throw new Error('CBL 是多盘棋谱库，请直接导入以批量添加其中的棋谱');
   if (['txt', 'md', 'pgn', 'iccs', 'fen', 'cpx'].includes(extension)) return await file.text();
   if (extension === 'docx') {
     onProgress('正在读取 Word 文档…');
@@ -31,7 +33,7 @@ export async function extractText(file, onProgress = () => {}) {
 }
 
 export async function importXqfFolderFiles(files, existingRecords = [], onProgress = () => {}) {
-  const candidates = Array.from(files).filter((file) => file.name.toLowerCase().endsWith('.xqf'));
+  const candidates = Array.from(files).filter((file) => /\.(xqf|cbl)$/i.test(file.name));
   const knownSources = new Set(existingRecords.filter((record) => record.userImported).map((record) => record.source?.name).filter(Boolean));
   const records = [];
   const failures = [];
@@ -44,9 +46,17 @@ export async function importXqfFolderFiles(files, existingRecords = [], onProgre
     try {
       if (index % 5 === 0) await new Promise((resolve) => setTimeout(resolve, 0));
       if (file.size > MAX_IMPORT_SIZE) throw new Error('文件超过 500 MiB 上限');
-      const parsed = parseXqf(await file.arrayBuffer(), file.name);
-      const record = convertTextToRecord(xqfMovesAsText(parsed), { title: parsed.title, sourceName });
-      records.push({ ...record, players: parsed.players, result: parsed.result, source: { ...record.source, name: sourceName }, userImported: true });
+      if (file.name.toLowerCase().endsWith('.cbl')) {
+        const library = parseCbl(await file.arrayBuffer(), sourceName);
+        for (const parsed of library.records) {
+          const record = convertTextToRecord(cblMovesAsText(parsed), { title: parsed.title, sourceName });
+          records.push({ ...record, players: parsed.players, result: parsed.result, initialPosition: parsed.initialPosition, source: { ...record.source, name: sourceName }, userImported: true });
+        }
+      } else {
+        const parsed = parseXqf(await file.arrayBuffer(), file.name);
+        const record = convertTextToRecord(xqfMovesAsText(parsed), { title: parsed.title, sourceName });
+        records.push({ ...record, players: parsed.players, result: parsed.result, source: { ...record.source, name: sourceName }, userImported: true });
+      }
       knownSources.add(sourceName);
     } catch (error) {
       failures.push({ sourceName, message: error.message });

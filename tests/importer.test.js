@@ -2,8 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { convertTextToRecord, extractText, importXqfFolderFiles, MAX_IMPORT_SIZE } from '../src/importer.js';
+import { cblMovesAsText, parseCbl } from '../src/cbl.js';
 import { parseXqf, xqfMovesAsText } from '../src/xqf.js';
-import { validateAndReplay } from '../src/rules.js';
+import { initialBoard, validateAndReplay } from '../src/rules.js';
 
 test('converts Chinese red/black notation into validated ICCS moves', () => {
   const record = convertTextToRecord('1. 炮二平五 马8进7', { title: '示例', sourceName: 'sample.txt' });
@@ -118,9 +119,41 @@ test('imports nested folder XQF files in batches, skipping invalid files and rep
   assert.equal(repeated.duplicates, 2);
 });
 
-test('folder import picker includes directories, nested files, and XQF only', async () => {
+test('parses a CBL library game and converts its mainline into a legal record', () => {
+  const buffer = new ArrayBuffer(101952 + 4096);
+  const bytes = new Uint8Array(buffer);
+  bytes.set(new TextEncoder().encode('CCBridgeLibrary'));
+  const view = new DataView(buffer);
+  view.setInt32(60, 1, true);
+  const encode = (offset, value, capacity) => {
+    for (let index = 0; index < value.length && index * 2 < capacity - 2; index += 1) view.setUint16(offset + index * 2, value.charCodeAt(index), true);
+  };
+  encode(64, '测试棋库', 512);
+  const recordOffset = 101952;
+  bytes.set(new TextEncoder().encode('CCBridge Record'), recordOffset);
+  encode(recordOffset + 16, '测试对局', 164);
+  encode(recordOffset + 756, '红棋手', 320);
+  encode(recordOffset + 1140, '黑棋手', 160);
+  bytes[recordOffset + 2112] = 1;
+  const initial = Array.from({ length: 90 }, () => 0);
+  const code = { r: 0x21, h: 0x22, e: 0x23, a: 0x24, k: 0x25, c: 0x26, p: 0x27, R: 0x11, H: 0x12, E: 0x13, A: 0x14, K: 0x15, C: 0x16, P: 0x17 };
+  const board = initialBoard();
+  for (let index = 0; index < board.length; index += 1) initial[index] = code[board[index]] ?? 0;
+  bytes.set(initial, recordOffset + 2120);
+  view.setInt32(recordOffset + 2214, 0, true);
+  bytes.set([1, 0, 56, 47], recordOffset + 2218);
+  const library = parseCbl(buffer, 'test.cbl');
+  assert.equal(library.title, '测试棋库');
+  assert.equal(library.records.length, 1);
+  assert.equal(library.records[0].players.red, '红棋手');
+  const converted = convertTextToRecord(cblMovesAsText(library.records[0]), { title: library.records[0].title, sourceName: 'test.cbl' });
+  assert.deepEqual(converted.moves, [{ from: 'c6', to: 'c5' }]);
+  assert.equal(validateAndReplay(converted).positions.length, 2);
+});
+
+test('folder import picker includes directories, nested files, XQF and CBL', async () => {
   const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
   const app = await readFile(new URL('../src/app.js', import.meta.url), 'utf8');
-  assert.match(html, /id="import-folder"[^>]*webkitdirectory[^>]*directory[^>]*multiple[^>]*accept="\.xqf"/);
+  assert.match(html, /id="import-folder"[^>]*webkitdirectory[^>]*directory[^>]*multiple[^>]*accept="\.xqf,\.cbl"/);
   assert.match(app, /#import-folder'\)\.addEventListener\('change', \(event\) => importXqfFolder\(event\.target\.files\)\)/);
 });

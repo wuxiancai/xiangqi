@@ -6,6 +6,7 @@ import { adjudicateRepetition } from './repetition.js';
 import { playMoveSound } from './audio.js';
 import { convertTextToRecord, extractText, importXqfFolderFiles, MAX_IMPORT_SIZE } from './importer.js';
 import { parseXqf, xqfMovesAsText } from './xqf.js';
+import { cblMovesAsText, parseCbl } from './cbl.js';
 
 const categories = ['古谱', '现代对局', '开局', '残局'];
 const labels = { K: '帥', A: '仕', E: '相', R: '車', H: '馬', C: '炮', P: '兵', k: '將', a: '士', e: '象', r: '車', h: '馬', c: '炮', p: '卒' };
@@ -263,11 +264,11 @@ async function importXqfFolder(files) {
   const input = $('#import-folder');
   const status = $('#folder-import-status');
   const selectedFiles = Array.from(files);
-  const xqfCount = selectedFiles.filter((file) => file.name.toLowerCase().endsWith('.xqf')).length;
+  const xqfCount = selectedFiles.filter((file) => /\.(xqf|cbl)$/i.test(file.name)).length;
   input.disabled = true;
   status.hidden = false;
   if (!xqfCount) {
-    status.textContent = '所选文件夹及子文件夹中没有 .xqf 棋谱。';
+    status.textContent = '所选文件夹及子文件夹中没有 .xqf 或 .cbl 棋谱。';
     input.value = '';
     input.disabled = false;
     return;
@@ -281,7 +282,7 @@ async function importXqfFolder(files) {
       await refreshRecords();
     }
     const ignoredCount = selectedFiles.length - xqfCount;
-    const summary = `批量导入完成：成功 ${result.records.length} 盘，失败 ${result.failures.length} 盘，重复跳过 ${result.duplicates} 盘${ignoredCount ? `，非 XQF 文件跳过 ${ignoredCount} 个` : ''}。`;
+    const summary = `批量导入完成：成功 ${result.records.length} 盘，失败 ${result.failures.length} 个文件，重复跳过 ${result.duplicates} 个文件${ignoredCount ? `，非 XQF/CBL 文件跳过 ${ignoredCount} 个` : ''}。`;
     const failureDetails = result.failures.slice(0, 3).map(({ sourceName, message }) => `${sourceName}：${message}`).join('；');
     status.textContent = failureDetails ? `${summary}失败示例：${failureDetails}${result.failures.length > 3 ? '；更多失败请检查文件后重试' : ''}` : summary;
     toast(summary);
@@ -300,6 +301,24 @@ async function importFile(file) {
   if (!file) return;
   if (file.size > MAX_IMPORT_SIZE) { toast('文件超过 500 MiB 上限'); $('#import-file').value = ''; return; }
   if (file.name.toLowerCase().endsWith('.json')) return importJsonFile(file);
+  if (file.name.toLowerCase().endsWith('.cbl')) {
+    try {
+      $('#import-status').textContent = '正在解析 CBL 多盘棋谱库…';
+      const library = parseCbl(await file.arrayBuffer(), file.name);
+      const ids = new Set(state.records.map((record) => record.id));
+      const records = library.records.map((game) => {
+        const record = convertTextToRecord(cblMovesAsText(game), { title: game.title, sourceName: file.name });
+        if (ids.has(record.id)) throw new Error(`棋谱 ID 已存在：${record.id}`);
+        ids.add(record.id);
+        return { ...record, players: game.players, result: game.result, initialPosition: game.initialPosition, userImported: true };
+      });
+      await recordRepository.putMany(records);
+      await refreshRecords();
+      toast(`CBL 棋谱库导入完成：成功 ${records.length} 盘`);
+    } catch (error) { toast(`CBL 导入失败：${error.message}`); }
+    finally { $('#import-file').value = ''; }
+    return;
+  }
   try {
     $('#import-status').textContent = '正在提取棋谱内容…';
     $('#import-text').value = '';
