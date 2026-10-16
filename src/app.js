@@ -124,16 +124,6 @@ function renderStudyBoard() {
   const initialSide = record?.initialSide ?? RED;
   const nextSide = state.studyPly % 2 ? otherSide(initialSide) : initialSide;
   $('#study-status').textContent = record ? `${record.title} · ${state.studyPly ? names[nextSide] + '行棋' : '开局'}` : '选择一盘棋谱开始';
-  $('#move-counter').textContent = record ? `${state.studyPly} / ${record.moves.length} 着` : '—';
-  $('#progress-fill').style.width = record?.moves.length ? `${state.studyPly / record.moves.length * 100}%` : '0%';
-  $('#move-result').textContent = record?.result ?? '—';
-  const annotation = record?.annotations?.[String(state.studyPly)];
-  const last = state.studyPly ? record?.moves[state.studyPly - 1] : null;
-  const currentBoard = board;
-  const lastCapture = last && currentBoard[last.to];
-  const checked = state.studyPly && gameStatus(currentBoard, nextSide).inCheck;
-  const autoExplanation = checked ? '将军，迫使对方应将。' : lastCapture ? '吃子，争取子力优势。' : '';
-  $('#annotation').lastElementChild.textContent = !record ? '选中棋谱后，这里会显示关键着法说明。' : annotation || autoExplanation || (state.studyPly ? '暂无解说' : '选中着法后显示关键着法说明。');
   renderMoveList();
 }
 
