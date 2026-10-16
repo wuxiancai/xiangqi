@@ -87,21 +87,39 @@ body{line-height:1.5}
 .history-ply{min-height:34px;font-size:11px}
 button,.import-button,.game-card{transition:background-color .16s,border-color .16s,color .16s,transform .16s}
 button:active,.import-button:active{transform:translateY(1px)}
+.study-board-header{height:auto;min-height:44px;align-items:center;gap:8px}
+.study-board-header>.study-status{flex:1 1 100px;min-width:0;padding:0;white-space:nowrap;overflow:hidden}
+.study-status #study-status{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.study-replay-tools{display:flex;align-items:center;gap:8px;flex:none}
+.study-replay-tools .replay-controls{gap:4px}
+.study-replay-tools .control-button{width:27px;height:30px;padding:0;font-size:10px;border-radius:7px}
+.study-replay-tools .play-button{width:32px;height:34px;padding:0 0 0 2px;font-size:10px;border-radius:9px}
+.study-replay-tools .speed-control{gap:5px;margin:0;font-size:9px;white-space:nowrap}
+.study-replay-tools .speed-control input{width:58px;flex:none}
+.study-replay-tools .speed-control output{min-width:34px;font-size:9px}
+.study-board-header>#study-flip{flex:none;padding:4px 2px;font-size:11px;white-space:nowrap}
+.replay-panel-compact{display:grid;grid-template-columns:minmax(0,1fr);gap:3px;padding:5px 10px 6px;margin:0 auto 7px;max-width:580px}
+.replay-panel-compact .move-progress,.replay-panel-compact .annotation{grid-column:1;margin:0}
+.replay-panel-compact .annotation{padding-top:4px}
 @media(max-width:720px){
   .library-panel,.moves-panel,.setup-panel,.history-panel{padding:16px}
-  .replay-panel-compact{grid-template-columns:1fr;gap:6px;padding:8px 10px}
-  .replay-panel-compact .replay-controls{grid-column:1;grid-row:auto;justify-content:space-between;gap:6px}
-  .replay-panel-compact .control-button{width:44px;height:44px;font-size:12px}
-  .replay-panel-compact .play-button{width:48px;height:48px}
-  .replay-panel-compact .speed-control{grid-column:1;grid-row:auto;margin:0;font-size:11px}
-  .replay-panel-compact .move-progress,.replay-panel-compact .annotation{grid-column:1}
-  .board-header{height:40px}
+  .study-board-header{min-height:40px;flex-wrap:wrap;row-gap:5px}
+  .study-board-header>.study-status{flex:1 1 0;order:0}
+  .study-board-header>#study-flip{order:1}
+  .study-replay-tools{flex:1 0 100%;order:2;flex-wrap:wrap;justify-content:center;gap:4px 12px}
+  .study-replay-tools .replay-controls{flex:1 0 100%;justify-content:space-around;gap:6px}
+  .study-replay-tools .control-button{width:44px;height:44px;font-size:12px}
+  .study-replay-tools .play-button{width:48px;height:48px}
+  .study-replay-tools .speed-control{flex:1 1 100%;justify-content:center;font-size:11px}
+  .study-replay-tools .speed-control input{width:min(52vw,220px)}
+  .study-replay-tools .speed-control output{font-size:11px;min-width:40px}
+  .replay-panel-compact{grid-template-columns:1fr;gap:5px;padding:6px 9px}
   .game-list{gap:8px}
 }
 @media(max-width:390px){
-  .replay-panel-compact{grid-template-columns:1fr}
-  .replay-panel-compact .control-button{width:44px;height:44px}
-  .replay-panel-compact .play-button{width:48px;height:48px}
+  .study-replay-tools .replay-controls{gap:4px}
+  .study-replay-tools .control-button{width:42px;height:44px}
+  .study-replay-tools .play-button{width:46px;height:48px}
   .study-header-copy h1{font-size:18px}
   .game-list{grid-template-columns:1fr}
 }

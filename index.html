@@ -37,14 +37,19 @@
           </aside>
 
           <section class="study-board-column">
-            <div class="board-header"><div><span class="live-dot"></span><span id="study-status">选择一盘棋谱开始</span></div><button id="study-flip" class="text-button">翻转棋盘</button></div>
-            <div class="replay-panel panel replay-panel-compact">
-              <div class="replay-controls">
-                <button id="study-first" class="control-button" aria-label="跳到开局" title="跳到开局">|◀</button><button id="study-prev" class="control-button" aria-label="上一步" title="上一步">◀</button>
-                <button id="study-play" class="play-button" aria-label="自动播放" title="自动播放">▶</button>
-                <button id="study-next" class="control-button" aria-label="下一步" title="下一步">▶</button><button id="study-last" class="control-button" aria-label="跳到末尾" title="跳到末尾">▶|</button>
+            <div class="board-header study-board-header">
+              <div class="study-status"><span class="live-dot"></span><span id="study-status">选择一盘棋谱开始</span></div>
+              <div class="study-replay-tools" aria-label="棋谱回放控制">
+                <div class="replay-controls">
+                  <button id="study-first" class="control-button" aria-label="跳到开局" title="跳到开局">|◀</button><button id="study-prev" class="control-button" aria-label="上一步" title="上一步">◀</button>
+                  <button id="study-play" class="play-button" aria-label="自动播放" title="自动播放">▶</button>
+                  <button id="study-next" class="control-button" aria-label="下一步" title="下一步">▶</button><button id="study-last" class="control-button" aria-label="跳到末尾" title="跳到末尾">▶|</button>
+                </div>
+                <label class="speed-control"><span>速度</span><input id="study-speed" type="range" min="250" max="5000" step="250" value="1200" aria-label="播放速度"><output id="speed-value">1.2 秒</output></label>
               </div>
-              <label class="speed-control"><span>速度</span><input id="study-speed" type="range" min="250" max="5000" step="250" value="1200"><output id="speed-value">1.2 秒</output></label>
+              <button id="study-flip" class="text-button">翻转棋盘</button>
+            </div>
+            <div class="replay-panel panel replay-panel-compact">
               <div class="move-progress"><span id="move-counter">—</span><div class="progress-track"><span id="progress-fill"></span></div><span id="move-result">—</span></div>
               <div id="annotation" class="annotation"><span class="annotation-mark">注</span><span>选中棋谱后，这里会显示关键着法说明。</span></div>
             </div>
