@@ -235,7 +235,7 @@ async function refreshRecords() {
 
 async function importJsonFile(file) {
   if (!file) return;
-  if (file.size > MAX_IMPORT_SIZE) { toast('文件超过 100 MiB 上限'); return; }
+  if (file.size > MAX_IMPORT_SIZE) { toast('文件超过 500 MiB 上限'); return; }
   try {
     const data = JSON.parse(await file.text());
     const backup = data?.format === 'chuhe-backup/v1';

@@ -29,10 +29,10 @@ test('rejects unknown or illegal notations rather than importing partial records
   assert.throws(() => convertTextToRecord('没有着法', { title: 'empty', sourceName: 'empty.txt' }), /没有识别到棋谱着法/);
 });
 
-test('accepts files up to 100 MiB and rejects larger imports', async () => {
-  assert.equal(MAX_IMPORT_SIZE, 100 * 1024 * 1024);
+test('accepts files up to 500 MiB and rejects larger imports', async () => {
+  assert.equal(MAX_IMPORT_SIZE, 500 * 1024 * 1024);
   const boundaryFile = { name: 'boundary.txt', size: MAX_IMPORT_SIZE, text: async () => '1. 炮二平五' };
   assert.equal(await extractText(boundaryFile), '1. 炮二平五');
   const oversizedFile = { ...boundaryFile, size: MAX_IMPORT_SIZE + 1 };
-  await assert.rejects(extractText(oversizedFile), /文件超过 100 MiB 上限/);
+  await assert.rejects(extractText(oversizedFile), /文件超过 500 MiB 上限/);
 });
