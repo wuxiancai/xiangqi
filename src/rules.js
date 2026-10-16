@@ -158,7 +158,11 @@ export function capturablePieces(board) {
   const targets = new Set();
   for (const attacker of [RED, BLACK]) {
     for (const move of legalMoves(board, attacker)) {
-      if (board[move.to] && sideOf(board[move.to]) !== attacker) targets.add(move.to);
+      if (!board[move.to] || sideOf(board[move.to]) === attacker) continue;
+      const afterCapture = applyMove(board, move);
+      const defender = otherSide(attacker);
+      const canRecapture = legalMoves(afterCapture, defender).some((reply) => reply.to === move.to);
+      if (!canRecapture) targets.add(move.to);
     }
   }
   for (const side of [RED, BLACK]) {

@@ -28,6 +28,15 @@ test('capturable piece squares include legal captures and checked generals', () 
   assert.ok(capturablePieces(checkedBoard).has(coord(4, 9)));
 });
 
+test('a piece with a legal friendly recapture is not marked as hanging', () => {
+  const board = emptyBoard();
+  put(board, 4, 9, 'K'); put(board, 3, 0, 'k');
+  put(board, 4, 5, 'P'); put(board, 1, 0, 'r');
+  put(board, 1, 9, 'H'); put(board, 0, 9, 'R');
+  assert.ok(legalMoves(board, BLACK).some((move) => move.from === coord(1, 0) && move.to === coord(1, 9)));
+  assert.equal(capturablePieces(board).has(coord(1, 9)), false);
+});
+
 test('rook cannot pass a blocker, cannon needs exactly one screen to capture', () => {
   const board = emptyBoard(); put(board, 4, 9, 'K'); put(board, 3, 0, 'k');
   put(board, 0, 9, 'R'); put(board, 0, 7, 'P'); put(board, 0, 5, 'c');

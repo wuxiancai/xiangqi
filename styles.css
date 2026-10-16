@@ -22,8 +22,6 @@
 .piece-label-shadow{font-family:'Noto Serif SC',serif;font-weight:800;font-size:21px;text-anchor:middle;dominant-baseline:central;fill:#241a12;opacity:.43;pointer-events:none}
 .piece-glint{fill:none;stroke:#fff8df;stroke-width:1.8;stroke-linecap:round;opacity:.75;pointer-events:none}
 .piece-glint.black{opacity:.82}
-.threat-ring{fill:#e85b39;stroke:#b42c20;stroke-width:1.7;opacity:.9;filter:drop-shadow(0 0 4px #ec6344aa);animation:threat-pulse 1.15s ease-in-out infinite alternate;pointer-events:none}
+.threat-ring{fill:#4dba7b;fill-opacity:.22;stroke:#258552;stroke-width:2;opacity:1;filter:drop-shadow(0 0 3px #2e9a6266);pointer-events:none}
 .board-legend{display:flex;align-items:center;justify-content:center;gap:8px;margin:10px auto 0;color:#8b6e5b;font-size:10px}
-.threat-key{width:12px;height:12px;border:2px solid #dc5135;border-radius:50%;box-shadow:0 0 6px #e85b3970}
-@keyframes threat-pulse{from{opacity:.55;transform:scale(.94)}to{opacity:1;transform:scale(1.04)}}
-@media(prefers-reduced-motion:reduce){.threat-ring{animation:none}}
+.threat-key{width:12px;height:12px;border:2px solid #258552;border-radius:50%;background:#4dba7b38;box-shadow:0 0 5px #2e9a6255}
