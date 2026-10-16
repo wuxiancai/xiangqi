@@ -93,22 +93,21 @@ function renderBoard(svg, board, flipped, onSquare, selected = null, hints = [],
     const threatStatus = threatened.get(square);
     if (piece) {
       const side = sideOf(piece);
-      if (threatStatus) svg.append(svgElement('circle', { cx: x, cy: y, r: 30, class: `threat-ring ${threatStatus}` }));
+      if (threatStatus) svg.append(svgElement('circle', { cx: x, cy: y, r: 25, class: `threat-ring ${threatStatus}` }));
       svg.append(svgElement('circle', { cx: x, cy: y + 5, r: 25, class: 'piece-shadow', filter: `url(#${prefix}-piece-shadow)` }));
       svg.append(svgElement('circle', { cx: x, cy: y + 3.2, r: 23, class: 'piece-side', fill: `url(#${prefix}-piece-side)` }));
       svg.append(svgElement('circle', { cx: x, cy: y, r: 23, class: `piece-rim ${side}`, fill: `url(#${prefix}-gold-rim)` }));
       svg.append(svgElement('circle', { cx: x, cy: y - 0.7, r: 20.6, class: `piece-disc ${side}`, fill: `url(#${prefix}-${side}-face)` }));
       svg.append(svgElement('circle', { cx: x, cy: y - 0.7, r: 17.9, class: `piece-inset ${side}` }));
-      const textShadow = svgElement('text', { x: x + 1, y: y + 2.3, class: 'piece-label-shadow' }); textShadow.textContent = labels[piece]; svg.append(textShadow);
       const text = svgElement('text', { x, y: y + 0.2, class: `piece-label ${side}` }); text.textContent = labels[piece]; svg.append(text);
       svg.append(svgElement('path', { d: `M ${x - 12} ${y - 15} Q ${x - 5} ${y - 21} ${x + 5} ${y - 18}`, class: `piece-glint ${side}` }));
     }
-    if (square === selected) svg.append(svgElement('circle', { cx: x, cy: y, r: 26, fill: 'none', stroke: '#40805d', 'stroke-width': 2.5, 'pointer-events': 'none' }));
+    if (square === selected) svg.append(svgElement('circle', { cx: x, cy: y, r: 25, fill: 'none', stroke: '#40805d', 'stroke-width': 1.8, 'pointer-events': 'none' }));
     if (lastMove?.from === square) {
-      svg.append(svgElement('circle', { cx: x, cy: y, r: 9, class: 'last-move-origin-ring' }));
-      svg.append(svgElement('circle', { cx: x, cy: y, r: 4, class: 'last-move-origin' }));
+      svg.append(svgElement('circle', { cx: x, cy: y, r: 8, class: 'last-move-origin-ring' }));
+      svg.append(svgElement('circle', { cx: x, cy: y, r: 3.5, class: 'last-move-origin' }));
     }
-    if (lastMove?.to === square) svg.append(svgElement('circle', { cx: x, cy: y, r: 30, class: 'last-move-destination' }));
+    if (lastMove?.to === square) svg.append(svgElement('circle', { cx: x, cy: y, r: 25, class: 'last-move-destination' }));
     const threatDescription = threatStatus === 'protected' ? '，受到己方保护' : threatStatus === 'exposed' ? '，无保护且可能被吃' : '';
     const hit = svgElement('rect', { x: x - 26, y: y - 26, width: 52, height: 52, class: 'board-hit', tabindex: '0', role: 'gridcell', 'aria-label': `${toICCS(square)}${piece ? ` ${labels[piece]}${threatDescription}` : ''}` });
     hit.dataset.square = String(square); svg.append(hit);
