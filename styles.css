@@ -25,3 +25,23 @@
 .threat-ring{fill:#4dba7b;fill-opacity:.22;stroke:#258552;stroke-width:2;opacity:1;filter:drop-shadow(0 0 3px #2e9a6266);pointer-events:none}
 .board-legend{display:flex;align-items:center;justify-content:center;gap:8px;margin:10px auto 0;color:#8b6e5b;font-size:10px}
 .threat-key{width:12px;height:12px;border:2px solid #258552;border-radius:50%;background:#4dba7b38;box-shadow:0 0 5px #2e9a6255}
+.board-frame{background:linear-gradient(135deg,#e5c78f,#bb8c50 48%,#e0bd81);border-radius:15px;padding:9px;box-shadow:0 12px 24px #5544212a,inset 0 0 0 2px #f5dfad,inset 0 0 0 5px #8b6238}
+.board-background{fill:#d0aa70;stroke:#8b6238;stroke-width:3}
+.board-line{stroke:#60452e;stroke-width:1.35;opacity:.95}
+.board-river-band{fill:#d2ae79;opacity:.88}
+.board-river{font-family:'Noto Serif SC',serif;fill:#8d714e;font-size:17px;font-weight:700;letter-spacing:3px;opacity:.8}
+.board-brand-pill{fill:#b99662;opacity:.68}
+.board-brand{font-family:'Noto Serif SC',serif;fill:#f3dfb2;font-size:16px;font-weight:700;letter-spacing:2px}
+.piece-shadow{fill:#49331d;opacity:.48}
+.piece-rim{stroke:#8f6535;stroke-width:1.25}
+.piece-rim.red,.piece-rim.black{stroke:#8f6535}
+.piece-disc,.piece-disc.red,.piece-disc.black{fill:#f3dfbb;stroke:#fff0c5;stroke-width:.8}
+.piece-inset,.piece-inset.red,.piece-inset.black{fill:none;stroke:#fff4d5;stroke-width:.8;opacity:.9}
+.piece-label{font-family:'Noto Serif SC',serif;font-weight:800;font-size:22px;text-anchor:middle;dominant-baseline:central;pointer-events:none;paint-order:stroke;stroke-width:.4px}
+.piece-label.red{fill:#a62f24;stroke:#f3d69e}
+.piece-label.black{fill:#211f1c;stroke:#e8d7b2}
+.threat-ring.red{fill:#ed443d;fill-opacity:.27;stroke:#e33e35;filter:drop-shadow(0 0 5px #ee413d99)}
+.threat-ring.black{fill:#42d963;fill-opacity:.23;stroke:#39bf50;filter:drop-shadow(0 0 5px #37da5b99)}
+.board-legend{gap:7px}
+.threat-key.red{border-color:#e33e35;background:#ed443d38;box-shadow:0 0 5px #ee413d55}
+.threat-key.green{border-color:#258552;background:#4dba7b38;box-shadow:0 0 5px #2e9a6255}

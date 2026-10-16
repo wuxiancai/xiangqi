@@ -57,9 +57,9 @@ function renderBoard(svg, board, flipped, onSquare, selected = null, hints = [],
   svg.replaceChildren();
   const prefix = svg.id;
   const defs = svgElement('defs');
-  defs.innerHTML = `<radialGradient id="${prefix}-red-face" cx="32%" cy="24%" r="78%"><stop offset="0" stop-color="#fff5db"/><stop offset=".16" stop-color="#f4d49a"/><stop offset=".53" stop-color="#d56a4a"/><stop offset=".83" stop-color="#a8392e"/><stop offset="1" stop-color="#69251f"/></radialGradient><radialGradient id="${prefix}-black-face" cx="32%" cy="22%" r="80%"><stop offset="0" stop-color="#fff9e9"/><stop offset=".15" stop-color="#d9caa5"/><stop offset=".52" stop-color="#5e6058"/><stop offset=".84" stop-color="#292e2b"/><stop offset="1" stop-color="#151918"/></radialGradient><linearGradient id="${prefix}-gold-rim" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff0bd"/><stop offset=".34" stop-color="#c69a55"/><stop offset=".65" stop-color="#f4d99d"/><stop offset="1" stop-color="#896533"/></linearGradient><filter id="${prefix}-piece-shadow" x="-40%" y="-40%" width="190%" height="200%"><feGaussianBlur in="SourceAlpha" stdDeviation="2.2"/><feOffset dy="2.2"/><feComponentTransfer><feFuncA type="linear" slope=".32"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter><filter id="${prefix}-threat-glow" x="-70%" y="-70%" width="240%" height="240%"><feGaussianBlur stdDeviation="2.6" result="blur"/><feFlood flood-color="#e34b35" flood-opacity=".78"/><feComposite in2="blur" operator="in"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>`;
+  defs.innerHTML = `<linearGradient id="${prefix}-wood" x2="0" y2="1"><stop stop-color="#dbb77c"/><stop offset=".48" stop-color="#cba36a"/><stop offset="1" stop-color="#d9b77f"/></linearGradient><radialGradient id="${prefix}-red-face" cx="32%" cy="20%" r="82%"><stop stop-color="#fff9e9"/><stop offset=".58" stop-color="#f3dfbb"/><stop offset=".84" stop-color="#d6aa68"/><stop offset="1" stop-color="#a66d37"/></radialGradient><radialGradient id="${prefix}-black-face" cx="32%" cy="20%" r="82%"><stop stop-color="#fff9e9"/><stop offset=".58" stop-color="#f3dfbb"/><stop offset=".84" stop-color="#d6aa68"/><stop offset="1" stop-color="#a66d37"/></radialGradient><linearGradient id="${prefix}-gold-rim" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff5ce"/><stop offset=".3" stop-color="#d9b26b"/><stop offset=".58" stop-color="#fff0bf"/><stop offset=".82" stop-color="#b78243"/><stop offset="1" stop-color="#f2d590"/></linearGradient><filter id="${prefix}-piece-shadow" x="-40%" y="-40%" width="190%" height="200%"><feGaussianBlur in="SourceAlpha" stdDeviation="2.2"/><feOffset dy="2.2"/><feComponentTransfer><feFuncA type="linear" slope=".32"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter><filter id="${prefix}-threat-glow" x="-70%" y="-70%" width="240%" height="240%"><feGaussianBlur stdDeviation="2.6" result="blur"/><feFlood flood-color="#e34b35" flood-opacity=".78"/><feComposite in2="blur" operator="in"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>`;
   svg.append(defs);
-  svg.append(svgElement('rect', { x: 0, y: 0, width: 450, height: 500, class: 'board-background' }));
+  svg.append(svgElement('rect', { x: 0, y: 0, width: 450, height: 500, rx: 8, class: 'board-background', fill: `url(#${prefix}-wood)` }));
   const lines = svgElement('g', { class: 'board-lines' });
   for (let rank = 0; rank < 10; rank += 1) {
     const start = point(0, rank); const end = point(8, rank);
@@ -79,7 +79,11 @@ function renderBoard(svg, board, flipped, onSquare, selected = null, hints = [],
     lines.append(svgElement('line', { x1: a.x, y1: a.y, x2: b.x, y2: b.y, class: 'board-line' }));
   }
   svg.append(lines);
-  const riverText = svgElement('text', { x: 225, y: 274, class: 'board-river', 'text-anchor': 'middle' }); riverText.textContent = '楚 河　漢 界'; svg.append(riverText);
+  svg.append(svgElement('rect', { x: 42, y: 249, width: 366, height: 46, class: 'board-river-band' }));
+  const leftRiver = svgElement('text', { x: 89, y: 279, class: 'board-river', 'text-anchor': 'middle' }); leftRiver.textContent = '楚 河'; svg.append(leftRiver);
+  const rightRiver = svgElement('text', { x: 361, y: 279, class: 'board-river', 'text-anchor': 'middle' }); rightRiver.textContent = '漢 界'; svg.append(rightRiver);
+  svg.append(svgElement('rect', { x: 161, y: 256, width: 128, height: 32, rx: 16, class: 'board-brand-pill' }));
+  const brandText = svgElement('text', { x: 225, y: 278, class: 'board-brand', 'text-anchor': 'middle' }); brandText.textContent = '楚河漢界'; svg.append(brandText);
   for (let square = 0; square < 90; square += 1) {
     const { file, rank } = mapSquare(square, flipped); const { x, y } = point(file, rank);
     if (lastMove && (square === lastMove.from || square === lastMove.to)) svg.append(svgElement('circle', { cx: x, cy: y, r: 21, class: 'last-move' }));
@@ -88,7 +92,7 @@ function renderBoard(svg, board, flipped, onSquare, selected = null, hints = [],
     if (piece) {
       const side = sideOf(piece);
       const isThreatened = threatened.has(square);
-      if (isThreatened) svg.append(svgElement('circle', { cx: x, cy: y, r: 22.5, class: 'threat-ring' }));
+      if (isThreatened) svg.append(svgElement('circle', { cx: x, cy: y, r: 22.5, class: `threat-ring ${side}` }));
       svg.append(svgElement('circle', { cx: x, cy: y + 1, r: 19.5, class: 'piece-shadow', filter: `url(#${prefix}-piece-shadow)` }));
       svg.append(svgElement('circle', { cx: x, cy: y, r: 19, class: `piece-rim ${side}`, fill: `url(#${prefix}-gold-rim)` }));
       svg.append(svgElement('circle', { cx: x, cy: y - 0.5, r: 16.9, class: `piece-disc ${side}`, fill: `url(#${prefix}-${side}-face)` }));
