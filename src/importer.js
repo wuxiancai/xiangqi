@@ -30,6 +30,31 @@ export async function extractText(file, onProgress = () => {}) {
   throw new Error(`暂不支持 .${extension} 格式；支持 JSON、TXT、MD、PGN、ICCS、FEN、DOCX、PDF 和常见图片`);
 }
 
+export async function importXqfFolderFiles(files, existingRecords = [], onProgress = () => {}) {
+  const candidates = Array.from(files).filter((file) => file.name.toLowerCase().endsWith('.xqf'));
+  const knownSources = new Set(existingRecords.filter((record) => record.userImported).map((record) => record.source?.name).filter(Boolean));
+  const records = [];
+  const failures = [];
+  let duplicates = 0;
+  for (let index = 0; index < candidates.length; index += 1) {
+    const file = candidates[index];
+    const sourceName = file.webkitRelativePath || file.name;
+    onProgress({ current: index + 1, total: candidates.length, sourceName });
+    if (knownSources.has(sourceName)) { duplicates += 1; continue; }
+    try {
+      if (index % 5 === 0) await new Promise((resolve) => setTimeout(resolve, 0));
+      if (file.size > MAX_IMPORT_SIZE) throw new Error('文件超过 500 MiB 上限');
+      const parsed = parseXqf(await file.arrayBuffer(), file.name);
+      const record = convertTextToRecord(xqfMovesAsText(parsed), { title: parsed.title, sourceName });
+      records.push({ ...record, players: parsed.players, result: parsed.result, source: { ...record.source, name: sourceName }, userImported: true });
+      knownSources.add(sourceName);
+    } catch (error) {
+      failures.push({ sourceName, message: error.message });
+    }
+  }
+  return { records, failures, duplicates, total: candidates.length };
+}
+
 async function createOcrWorker(onProgress) {
   const { createWorker } = await import('https://cdn.jsdelivr.net/npm/tesseract.js@6.0.1/+esm');
   const worker = await createWorker('chi_sim+eng', 1, { logger: (message) => { if (message.status) onProgress(`中文 OCR：${message.status}${message.progress ? ` ${Math.round(message.progress * 100)}%` : ''}`); } });

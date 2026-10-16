@@ -32,6 +32,6 @@ npm test
 - 自托管静态文件可由 HTTPS 静态站点托管；首版无后端进程，因此无需 systemd 服务。
 ## 导入棋谱
 
-棋谱库支持导入 `xiangqi-study/v1` JSON，以及 XQF、TXT、Markdown、PGN/ICCS/FEN 文本、DOCX、PDF 和常见图片（PNG/JPEG/WebP/BMP/TIFF）。XQF 会在本机解码，再逐着转换为可检查的 ICCS 坐标文本和内部记录；其他非 JSON 格式先提取/识别文本，显示可编辑预览后逐着校验。所有着法都必须通过本地象棋规则校验，非法时不会部分导入。单文件上限 500 MiB。
+棋谱库支持导入 `xiangqi-study/v1` JSON，以及 XQF、TXT、Markdown、PGN/ICCS/FEN 文本、DOCX、PDF 和常见图片（PNG/JPEG/WebP/BMP/TIFF）。可点击“导入文件夹”批量导入所选目录及其子目录中的 XQF 文件；逐盘解码并校验，成功批量保存，失败文件跳过并显示原因，重复路径自动跳过。XQF 会在本机解码，再逐着转换为可检查的 ICCS 坐标文本和内部记录；其他非 JSON 格式先提取/识别文本，显示可编辑预览后逐着校验。所有着法都必须通过本地象棋规则校验，非法时不会部分导入。单文件上限 500 MiB。
 
 PDF、DOCX 与图片解析组件在首次使用时从 jsDelivr 加载；中文 OCR 使用 Tesseract.js 与简体中文识别模型。文件内容在当前浏览器本地处理，不会上传。扫描 PDF 会逐页 OCR。旧版二进制 DOC、加密文档以及未列出的专有格式需先转为支持的格式；棋谱图片须清晰展示可识别的中文记谱，棋盘局面截图暂不自动识别为着法。

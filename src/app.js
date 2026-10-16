@@ -4,7 +4,7 @@ import { loadSettings, recordRepository, saveSettings } from './storage.js';
 import { chineseNotation } from './notation.js';
 import { adjudicateRepetition } from './repetition.js';
 import { playMoveSound } from './audio.js';
-import { convertTextToRecord, extractText, MAX_IMPORT_SIZE } from './importer.js';
+import { convertTextToRecord, extractText, importXqfFolderFiles, MAX_IMPORT_SIZE } from './importer.js';
 import { parseXqf, xqfMovesAsText } from './xqf.js';
 
 const categories = ['古谱', '现代对局', '开局', '残局'];
@@ -259,6 +259,41 @@ async function importJsonFile(file) {
   } catch (error) { toast(`导入失败：${error.message}`); }
 }
 
+async function importXqfFolder(files) {
+  const input = $('#import-folder');
+  const status = $('#folder-import-status');
+  const selectedFiles = Array.from(files);
+  const xqfCount = selectedFiles.filter((file) => file.name.toLowerCase().endsWith('.xqf')).length;
+  input.disabled = true;
+  status.hidden = false;
+  if (!xqfCount) {
+    status.textContent = '所选文件夹及子文件夹中没有 .xqf 棋谱。';
+    input.value = '';
+    input.disabled = false;
+    return;
+  }
+  try {
+    const result = await importXqfFolderFiles(selectedFiles, state.records, ({ current, total, sourceName }) => {
+      status.textContent = `正在校验 ${current}/${total}：${sourceName}`;
+    });
+    if (result.records.length) {
+      await recordRepository.putMany(result.records);
+      await refreshRecords();
+    }
+    const ignoredCount = selectedFiles.length - xqfCount;
+    const summary = `批量导入完成：成功 ${result.records.length} 盘，失败 ${result.failures.length} 盘，重复跳过 ${result.duplicates} 盘${ignoredCount ? `，非 XQF 文件跳过 ${ignoredCount} 个` : ''}。`;
+    const failureDetails = result.failures.slice(0, 3).map(({ sourceName, message }) => `${sourceName}：${message}`).join('；');
+    status.textContent = failureDetails ? `${summary}失败示例：${failureDetails}${result.failures.length > 3 ? '；更多失败请检查文件后重试' : ''}` : summary;
+    toast(summary);
+  } catch (error) {
+    status.textContent = `批量导入中止：${error.message}`;
+    toast(`批量导入失败：${error.message}`);
+  } finally {
+    input.value = '';
+    input.disabled = false;
+  }
+}
+
 let pendingImportSource = '';
 let pendingXqfMetadata = null;
 async function importFile(file) {
@@ -445,6 +480,7 @@ function bindEvents() {
   document.addEventListener('keydown', unlockMoveAudio);
   document.querySelectorAll('.nav-button').forEach((button) => button.addEventListener('click', () => setView(button.dataset.view)));
   $('#import-file').addEventListener('change', (event) => importFile(event.target.files[0]));
+  $('#import-folder').addEventListener('change', (event) => importXqfFolder(event.target.files));
   $('#convert-import').addEventListener('click', convertAndImport);
   $('#search-input').addEventListener('input', (event) => { state.query = event.target.value; renderLibrary(); });
   $('#export-button').addEventListener('click', exportRecords);

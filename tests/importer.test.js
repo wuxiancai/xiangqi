@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { convertTextToRecord, extractText, MAX_IMPORT_SIZE } from '../src/importer.js';
+import { readFile } from 'node:fs/promises';
+import { convertTextToRecord, extractText, importXqfFolderFiles, MAX_IMPORT_SIZE } from '../src/importer.js';
 import { parseXqf, xqfMovesAsText } from '../src/xqf.js';
 import { validateAndReplay } from '../src/rules.js';
 
@@ -87,4 +88,39 @@ test('extractText recognizes XQF binary files without text decoding', async () =
   bytes.set([47, 56, 0, 0], 1032);
   const text = await extractText({ name: 'opening.XQF', size: bytes.byteLength, arrayBuffer: async () => bytes.buffer });
   assert.match(text, /\bc6c5\b/);
+});
+
+test('imports nested folder XQF files in batches, skipping invalid files and repeated paths', async () => {
+  const createFile = (name, relativePath, valid = true) => {
+    const bytes = new Uint8Array(valid ? 1048 : 32);
+    if (valid) {
+      bytes.set([0x58, 0x51, 0x0a]);
+      bytes.set([0x18, 0x20, 0xf0, 0xff], 1024);
+      bytes.set([47, 56, 0, 0], 1032);
+    }
+    return { name, webkitRelativePath: relativePath, size: bytes.byteLength, arrayBuffer: async () => bytes.buffer };
+  };
+  const files = [
+    createFile('first.XQF', 'collection/first.XQF'),
+    createFile('nested.xqf', 'collection/subfolder/nested.xqf'),
+    createFile('broken.xqf', 'collection/subfolder/broken.xqf', false),
+    { name: 'readme.txt', webkitRelativePath: 'collection/readme.txt', size: 4 },
+  ];
+  const progress = [];
+  const result = await importXqfFolderFiles(files, [], (item) => progress.push(item));
+  assert.equal(result.total, 3);
+  assert.equal(result.records.length, 2);
+  assert.equal(result.failures.length, 1);
+  assert.equal(result.records[1].source.name, 'collection/subfolder/nested.xqf');
+  assert.equal(progress.length, 3);
+  const repeated = await importXqfFolderFiles(files.slice(0, 2), result.records);
+  assert.equal(repeated.records.length, 0);
+  assert.equal(repeated.duplicates, 2);
+});
+
+test('folder import picker includes directories, nested files, and XQF only', async () => {
+  const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
+  const app = await readFile(new URL('../src/app.js', import.meta.url), 'utf8');
+  assert.match(html, /id="import-folder"[^>]*webkitdirectory[^>]*directory[^>]*multiple[^>]*accept="\.xqf"/);
+  assert.match(app, /#import-folder'\)\.addEventListener\('change', \(event\) => importXqfFolder\(event\.target\.files\)\)/);
 });
