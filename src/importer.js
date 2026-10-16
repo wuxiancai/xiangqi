@@ -1,14 +1,14 @@
 import { BLACK, RED, applyMove, initialBoard, legalMoves, otherSide, parseFEN, sideOf, toICCS, validateAndReplay } from './rules.js';
 import { chineseNotation } from './notation.js';
 
-const MAX_SIZE = 2 * 1024 * 1024;
+export const MAX_IMPORT_SIZE = 100 * 1024 * 1024;
 const tokenPattern = /[a-i][0-9][a-i][0-9]|(?:[前中后](?:车|車|马|馬|炮|兵|卒|帅|帥|将|將|相|象|仕|士)(?:进|進|退|平)[一二三四五六七八九1-9])|(?:(?:车|車|马|馬|炮|兵|卒|帅|帥|将|將|相|象|仕|士)[一二三四五六七八九1-9](?:进|進|退|平)[一二三四五六七八九1-9])/g;
 
 const normalize = (value) => value.replaceAll('車', '车').replaceAll('馬', '马').replaceAll('帥', '帅').replaceAll('將', '将').replaceAll('進', '进');
 
 export async function extractText(file, onProgress = () => {}) {
   if (!file) throw new Error('未选择文件');
-  if (file.size > MAX_SIZE) throw new Error('文件超过 2 MiB 上限');
+  if (file.size > MAX_IMPORT_SIZE) throw new Error('文件超过 100 MiB 上限');
   const extension = file.name.split('.').at(-1).toLowerCase();
   if (extension === 'json') throw new Error('JSON 棋谱请使用 JSON 导入流程');
   if (['txt', 'md', 'pgn', 'iccs', 'fen', 'cpx'].includes(extension)) return await file.text();

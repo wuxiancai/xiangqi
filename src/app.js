@@ -4,7 +4,7 @@ import { loadSettings, recordRepository, saveSettings } from './storage.js';
 import { chineseNotation } from './notation.js';
 import { adjudicateRepetition } from './repetition.js';
 import { playMoveSound } from './audio.js';
-import { convertTextToRecord, extractText } from './importer.js';
+import { convertTextToRecord, extractText, MAX_IMPORT_SIZE } from './importer.js';
 
 const categories = ['古谱', '现代对局', '开局', '残局'];
 const labels = { K: '帥', A: '仕', E: '相', R: '車', H: '馬', C: '炮', P: '兵', k: '將', a: '士', e: '象', r: '車', h: '馬', c: '炮', p: '卒' };
@@ -235,7 +235,7 @@ async function refreshRecords() {
 
 async function importJsonFile(file) {
   if (!file) return;
-  if (file.size > 2 * 1024 * 1024) { toast('文件超过 2 MiB 上限'); return; }
+  if (file.size > MAX_IMPORT_SIZE) { toast('文件超过 100 MiB 上限'); return; }
   try {
     const data = JSON.parse(await file.text());
     const backup = data?.format === 'chuhe-backup/v1';
