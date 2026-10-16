@@ -1,7 +1,26 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { requestSuggestion } from '../src/ai.js';
-import { initialBoard, legalMoves, RED, toICCS } from '../src/rules.js';
+import { readFile } from 'node:fs/promises';
+import { chooseLocalMove, requestSuggestion } from '../src/ai.js';
+import { applyMove, coord, initialBoard, legalMoves, RED, BLACK, toICCS } from '../src/rules.js';
+
+test('the game setup defaults to the strongest local AI setting', async () => {
+  const markup = await readFile(new URL('../index.html', import.meta.url), 'utf8');
+  assert.match(markup, /<option value="max" selected>最强 · 最多搜索 6 层<\/option>/);
+});
+
+test('default and max strength avoid leaving a rook for a cannon capture', () => {
+  const board = Array(90).fill(null);
+  const put = (file, rank, piece) => { board[coord(file, rank)] = piece; };
+  put(4, 9, 'K'); put(3, 0, 'k');
+  put(0, 0, 'c'); put(0, 2, 'P'); put(0, 5, 'R');
+  const stats = {};
+  const move = chooseLocalMove(board, RED, undefined, stats);
+  assert.equal(move.from, coord(0, 5));
+  assert.ok(stats.depth > 1);
+  const next = applyMove(board, move);
+  assert.equal(legalMoves(next, BLACK).some((reply) => reply.to === move.to), false);
+});
 
 test('external AI suggestions must match a locally legal ICCS move', async () => {
   const originalFetch = globalThis.fetch;

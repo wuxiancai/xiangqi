@@ -311,7 +311,7 @@ async function exportRecords() {
 }
 
 function saveGame() {
-  const payload = { board: state.board, side: state.side, history: state.history, gameOver: state.gameOver, adjudication: state.adjudication, mode: $('#mode-select').value, userSide: $('#side-select').value };
+  const payload = { board: state.board, side: state.side, history: state.history, gameOver: state.gameOver, adjudication: state.adjudication, mode: $('#mode-select').value, userSide: $('#side-select').value, strength: $('#strength-select').value };
   recordRepository.putState('active-game', payload).catch(() => {});
 }
 
@@ -452,6 +452,7 @@ function bindEvents() {
     if ($('#mode-select').value === 'ai' && $('#side-select').value === 'black') scheduleAiMove();
   });
   $('#mode-select').addEventListener('change', () => { state.board = initialBoard(); state.side = RED; state.history = []; state.gameOver = false; state.adjudication = null; renderPlayBoard(); saveGame(); if ($('#mode-select').value === 'ai' && $('#side-select').value === 'black') scheduleAiMove(); });
+  $('#strength-select').addEventListener('change', saveGame);
   $('#side-select').addEventListener('change', () => { if ($('#mode-select').value === 'ai') { state.board = initialBoard(); state.side = RED; state.history = []; state.gameOver = false; state.adjudication = null; renderPlayBoard(); saveGame(); if ($('#side-select').value === 'black') scheduleAiMove(); } });
   $('#suggest-button').addEventListener('click', requestAdvice);
   $('#settings-button').addEventListener('click', openSettings);
@@ -473,6 +474,7 @@ function openSettings() {
 }
 
 async function initialize() {
+  $('#strength-select').value = 'max';
   bindEvents();
   try {
     const response = await fetch('./data/records/modern-games.json');
@@ -483,7 +485,7 @@ async function initialize() {
     const savedGame = await recordRepository.getState('active-game');
     if (savedGame?.board?.length === 90 && Array.isArray(savedGame.history)) {
       state.board = savedGame.board; state.side = savedGame.side; state.history = savedGame.history; state.gameOver = savedGame.gameOver; state.adjudication = savedGame.adjudication ?? null;
-      $('#mode-select').value = savedGame.mode ?? 'local'; $('#side-select').value = savedGame.userSide ?? 'red';
+      $('#mode-select').value = savedGame.mode ?? 'local'; $('#side-select').value = savedGame.userSide ?? 'red'; $('#strength-select').value = savedGame.strength ?? 'max';
     }
   } catch { $('#storage-status').textContent = '本地存储不可用'; }
   await refreshRecords();
