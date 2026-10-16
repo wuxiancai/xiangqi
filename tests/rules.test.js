@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { BLACK, RED, coord, fromICCS, initialBoard, isInCheck, legalMoves, gameStatus, applyMove, parseFEN, toICCS, validateAndReplay } from '../src/rules.js';
+import { BLACK, RED, capturablePieces, coord, fromICCS, initialBoard, isInCheck, legalMoves, gameStatus, applyMove, parseFEN, toICCS, validateAndReplay } from '../src/rules.js';
 
 function emptyBoard() { return Array(90).fill(null); }
 function put(board, file, rank, piece) { board[coord(file, rank)] = piece; }
@@ -13,6 +13,19 @@ test('standard setup contains 32 pieces and ICCS coordinates round-trip', () => 
   assert.equal(board.filter(Boolean).length, 32);
   assert.equal(toICCS(fromICCS('e9')), 'e9');
   assert.throws(() => fromICCS('j2'), /无效/);
+});
+
+test('capturable piece squares include legal captures and checked generals', () => {
+  const board = emptyBoard();
+  put(board, 4, 9, 'K'); put(board, 3, 0, 'k');
+  put(board, 0, 0, 'r'); put(board, 0, 5, 'H'); put(board, 4, 5, 'P');
+  const threatened = capturablePieces(board);
+  assert.ok(threatened.has(coord(0, 5)));
+
+  const checkedBoard = emptyBoard();
+  put(checkedBoard, 4, 9, 'K'); put(checkedBoard, 3, 0, 'k');
+  put(checkedBoard, 4, 0, 'r');
+  assert.ok(capturablePieces(checkedBoard).has(coord(4, 9)));
 });
 
 test('rook cannot pass a blocker, cannon needs exactly one screen to capture', () => {

@@ -154,6 +154,22 @@ export function legalMoves(board, side) {
   return pseudoMoves(board, side).filter((move) => kindOf(board[move.to]) !== 'K' && !isInCheck(applyMove(board, move), side));
 }
 
+export function capturablePieces(board) {
+  const targets = new Set();
+  for (const attacker of [RED, BLACK]) {
+    for (const move of legalMoves(board, attacker)) {
+      if (board[move.to] && sideOf(board[move.to]) !== attacker) targets.add(move.to);
+    }
+  }
+  for (const side of [RED, BLACK]) {
+    if (isInCheck(board, side)) {
+      const king = board.findIndex((piece) => kindOf(piece) === 'K' && sideOf(piece) === side);
+      if (king >= 0) targets.add(king);
+    }
+  }
+  return targets;
+}
+
 export function gameStatus(board, sideToMove) {
   const moves = legalMoves(board, sideToMove);
   if (moves.length) return { over: false, inCheck: isInCheck(board, sideToMove), winner: null, reason: null };
