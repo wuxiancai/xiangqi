@@ -558,13 +558,27 @@ function undoMove() {
 }
 
 async function requestAdvice() {
-  const button = $('#suggest-button'); button.disabled = true;
+  const button = $('#suggest-button'); const output = $('#ai-output');
+  button.disabled = true; button.textContent = '分析中…'; output.textContent = '正在分析当前局势，稍候显示推荐着法…';
   const controller = new AbortController(); const timeout = setTimeout(() => controller.abort(), 20000);
   try {
-    const result = await requestSuggestion({ board: state.board, side: state.side, moves: legalMoves(state.board, state.side), settings: state.settings, strength: $('#strength-select').value, signal: controller.signal });
-    $('#ai-output').textContent = `${names[state.side]}可考虑 ${chineseNotation(state.board, result.move, state.side)}。${result.explanation}`;
-  } catch (error) { $('#ai-output').textContent = `暂时无法分析：${error.name === 'AbortError' ? '请求超时' : error.message}`; }
-  finally { clearTimeout(timeout); button.disabled = false; }
+    const moves = legalMoves(state.board, state.side);
+    if (!moves.length) { output.textContent = '当前局面没有合法着法，棋局可能已经结束。'; return; }
+    const result = await requestSuggestion({ board: state.board, side: state.side, moves, settings: state.settings, strength: $('#strength-select').value, signal: controller.signal });
+    output.textContent = `${names[state.side]}可考虑 ${chineseNotation(state.board, result.move, state.side)}。${result.explanation}`;
+  } catch (error) {
+    const cause = error.name === 'AbortError' ? '请求超时' : error.message;
+    if (state.settings.apiUrl && state.settings.apiKey && state.settings.model) {
+      try {
+        const move = await chooseLocalMoveAsync(state.board, state.side, $('#strength-select').value);
+        if (move && legalMoves(state.board, state.side).some((candidate) => sameMove(candidate, move))) {
+          output.textContent = `外部 AI 暂不可用（${cause}），本地建议：${names[state.side]}可考虑 ${chineseNotation(state.board, move, state.side)}。本地搜索建议，棋力未经对局基准认证。`;
+        } else output.textContent = `外部 AI 暂不可用（${cause}），本地搜索未能提供合法着法。`;
+      } catch (fallbackError) { output.textContent = `暂时无法分析：${cause}；本地搜索失败：${fallbackError.message}`; }
+    } else output.textContent = `暂时无法分析：${cause}`;
+  } finally {
+    clearTimeout(timeout); button.disabled = false; button.textContent = '局势建议';
+  }
 }
 
 function setView(view) {
