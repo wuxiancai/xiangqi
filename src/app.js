@@ -1,6 +1,7 @@
 import { BLACK, RED, applyMove, capturablePieces, fileOf, gameStatus, initialBoard, kindOf, legalMoves, otherSide, rankOf, sameMove, sideOf, toICCS, validateAndReplay } from './rules.js';
 import { chooseLocalMoveAsync, requestSuggestion } from './ai.js';
 import { loadSettings, recordRepository, saveSettings } from './storage.js';
+import { chineseNotation } from './notation.js';
 
 const categories = ['古谱', '现代对局', '开局', '残局'];
 const labels = { K: '帥', A: '仕', E: '相', R: '車', H: '馬', C: '炮', P: '兵', k: '將', a: '士', e: '象', r: '車', h: '馬', c: '炮', p: '卒' };
@@ -79,11 +80,11 @@ function renderBoard(svg, board, flipped, onSquare, selected = null, hints = [],
     lines.append(svgElement('line', { x1: a.x, y1: a.y, x2: b.x, y2: b.y, class: 'board-line' }));
   }
   svg.append(lines);
-  svg.append(svgElement('rect', { x: 42, y: 249, width: 366, height: 46, class: 'board-river-band' }));
-  const leftRiver = svgElement('text', { x: 89, y: 279, class: 'board-river', 'text-anchor': 'middle' }); leftRiver.textContent = '楚 河'; svg.append(leftRiver);
-  const rightRiver = svgElement('text', { x: 361, y: 279, class: 'board-river', 'text-anchor': 'middle' }); rightRiver.textContent = '漢 界'; svg.append(rightRiver);
-  svg.append(svgElement('rect', { x: 161, y: 256, width: 128, height: 32, rx: 16, class: 'board-brand-pill' }));
-  const brandText = svgElement('text', { x: 225, y: 278, class: 'board-brand', 'text-anchor': 'middle' }); brandText.textContent = '楚河漢界'; svg.append(brandText);
+  svg.append(svgElement('rect', { x: 44, y: 229, width: 362, height: 40, class: 'board-river-band' }));
+  const leftRiver = svgElement('text', { x: 89, y: 258, class: 'board-river', 'text-anchor': 'middle' }); leftRiver.textContent = '楚 河'; svg.append(leftRiver);
+  const rightRiver = svgElement('text', { x: 361, y: 258, class: 'board-river', 'text-anchor': 'middle' }); rightRiver.textContent = '漢 界'; svg.append(rightRiver);
+  svg.append(svgElement('rect', { x: 161, y: 237, width: 128, height: 24, rx: 12, class: 'board-brand-pill' }));
+  const brandText = svgElement('text', { x: 225, y: 255, class: 'board-brand', 'text-anchor': 'middle' }); brandText.textContent = '楚河漢界'; svg.append(brandText);
   for (let square = 0; square < 90; square += 1) {
     const { file, rank } = mapSquare(square, flipped); const { x, y } = point(file, rank);
     if (lastMove && (square === lastMove.from || square === lastMove.to)) svg.append(svgElement('circle', { cx: x, cy: y, r: 21, class: 'last-move' }));
@@ -141,7 +142,7 @@ function renderMoveList() {
       if (ply > moves.length) { const spacer = document.createElement('span'); container.append(spacer); continue; }
       const move = moves[ply - 1]; const side = ply % 2 ? state.currentRecord.initialSide ?? RED : otherSide(state.currentRecord.initialSide ?? RED);
       const button = document.createElement('button'); button.className = `move-item${state.studyPly === ply ? ' active' : ''}`;
-      button.textContent = `${side === RED ? '红' : '黑'} ${toICCS(move.from)}-${toICCS(move.to)}`;
+      button.textContent = chineseNotation(state.currentRecord.positions[ply - 1], move, side);
       button.setAttribute('aria-label', `第 ${ply} 着，${button.textContent}`);
       button.onclick = () => { stopPlayback(); state.studyPly = ply; renderStudyBoard(); };
       container.append(button);
@@ -289,8 +290,8 @@ function renderHistory() {
   if (!state.history.length) { const empty = document.createElement('span'); empty.className = 'move-empty'; empty.textContent = '棋局尚未开始'; container.append(empty); return; }
   state.history.forEach(({ move, captured }, index) => {
     const item = document.createElement('span'); item.className = `history-ply${index === state.history.length - 1 ? ' active' : ''}`;
-    const number = document.createElement('strong'); number.textContent = `${Math.floor(index / 2) + 1}${index % 2 ? '…' : '.'}`;
-    const notation = document.createElement('span'); notation.textContent = `${toICCS(move.from)}-${toICCS(move.to)}${captured ? ' ×' : ''}`;
+    const number = document.createElement('strong'); number.textContent = `${Math.floor(index / 2) + 1}${index % 2 ? '...' : '.'}`;
+    const notation = document.createElement('span'); notation.textContent = `${chineseNotation(previousBoard, move, previousSide)}${captured ? ' ×' : ''}`;
     item.append(number, notation); container.append(item);
   });
 }
@@ -361,7 +362,7 @@ async function requestAdvice() {
   const controller = new AbortController(); const timeout = setTimeout(() => controller.abort(), 20000);
   try {
     const result = await requestSuggestion({ board: state.board, side: state.side, moves: legalMoves(state.board, state.side), settings: state.settings, strength: $('#strength-select').value, signal: controller.signal });
-    $('#ai-output').textContent = `${names[state.side]}可考虑 ${toICCS(result.move.from)}-${toICCS(result.move.to)}。${result.explanation}`;
+    $('#ai-output').textContent = `${names[state.side]}可考虑 ${chineseNotation(state.board, result.move, state.side)}。${result.explanation}`;
   } catch (error) { $('#ai-output').textContent = `暂时无法分析：${error.name === 'AbortError' ? '请求超时' : error.message}`; }
   finally { clearTimeout(timeout); button.disabled = false; }
 }
