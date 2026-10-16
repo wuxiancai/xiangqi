@@ -36,7 +36,7 @@ function unlockMoveAudio() {
 function mapSquare(square, flipped) {
   return flipped ? { file: 8 - fileOf(square), rank: 9 - rankOf(square) } : { file: fileOf(square), rank: rankOf(square) };
 }
-function point(file, rank) { return { x: 42 + file * 46, y: 42 + rank * 46 }; }
+function point(file, rank) { return { x: 50 + file * 50, y: 50 + rank * 50 }; }
 function svgElement(name, attributes = {}) {
   const node = document.createElementNS('http://www.w3.org/2000/svg', name);
   for (const [key, value] of Object.entries(attributes)) node.setAttribute(key, value);
@@ -47,9 +47,9 @@ function renderBoard(svg, board, flipped, onSquare, selected = null, hints = [],
   svg.replaceChildren();
   const prefix = svg.id;
   const defs = svgElement('defs');
-  defs.innerHTML = `<linearGradient id="${prefix}-wood" x2="0" y2="1"><stop stop-color="#dbb77c"/><stop offset=".48" stop-color="#cba36a"/><stop offset="1" stop-color="#d9b77f"/></linearGradient><radialGradient id="${prefix}-red-face" cx="32%" cy="20%" r="82%"><stop stop-color="#fff9e9"/><stop offset=".58" stop-color="#f3dfbb"/><stop offset=".84" stop-color="#d6aa68"/><stop offset="1" stop-color="#a66d37"/></radialGradient><radialGradient id="${prefix}-black-face" cx="32%" cy="20%" r="82%"><stop stop-color="#fff9e9"/><stop offset=".58" stop-color="#f3dfbb"/><stop offset=".84" stop-color="#d6aa68"/><stop offset="1" stop-color="#a66d37"/></radialGradient><linearGradient id="${prefix}-gold-rim" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff5ce"/><stop offset=".3" stop-color="#d9b26b"/><stop offset=".58" stop-color="#fff0bf"/><stop offset=".82" stop-color="#b78243"/><stop offset="1" stop-color="#f2d590"/></linearGradient><filter id="${prefix}-piece-shadow" x="-40%" y="-40%" width="190%" height="200%"><feGaussianBlur in="SourceAlpha" stdDeviation="2.2"/><feOffset dy="2.2"/><feComponentTransfer><feFuncA type="linear" slope=".32"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter><filter id="${prefix}-threat-glow" x="-70%" y="-70%" width="240%" height="240%"><feGaussianBlur stdDeviation="2.6" result="blur"/><feFlood flood-color="#e34b35" flood-opacity=".78"/><feComposite in2="blur" operator="in"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>`;
+  defs.innerHTML = `<linearGradient id="${prefix}-wood" x2="0" y2="1"><stop stop-color="#dbb77c"/><stop offset=".48" stop-color="#cba36a"/><stop offset="1" stop-color="#d9b77f"/></linearGradient><radialGradient id="${prefix}-red-face" cx="30%" cy="17%" r="86%"><stop stop-color="#fffdf4"/><stop offset=".48" stop-color="#f8e8ca"/><stop offset=".78" stop-color="#d9ae70"/><stop offset="1" stop-color="#a66d37"/></radialGradient><radialGradient id="${prefix}-black-face" cx="30%" cy="17%" r="86%"><stop stop-color="#fffdf4"/><stop offset=".48" stop-color="#f8e8ca"/><stop offset=".78" stop-color="#d9ae70"/><stop offset="1" stop-color="#a66d37"/></radialGradient><linearGradient id="${prefix}-gold-rim" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff9dc"/><stop offset=".22" stop-color="#f4d995"/><stop offset=".48" stop-color="#c18b49"/><stop offset=".68" stop-color="#fff0c0"/><stop offset=".88" stop-color="#9a632f"/><stop offset="1" stop-color="#f1d08a"/></linearGradient><linearGradient id="${prefix}-piece-side" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#e7c580"/><stop offset=".34" stop-color="#b47a3d"/><stop offset="1" stop-color="#714522"/></linearGradient><filter id="${prefix}-piece-shadow" x="-50%" y="-50%" width="210%" height="230%"><feGaussianBlur in="SourceAlpha" stdDeviation="3.5"/><feOffset dy="4"/><feComponentTransfer><feFuncA type="linear" slope=".48"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter><filter id="${prefix}-threat-glow" x="-70%" y="-70%" width="240%" height="240%"><feGaussianBlur stdDeviation="2.6" result="blur"/><feFlood flood-color="#e34b35" flood-opacity=".78"/><feComposite in2="blur" operator="in"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>`;
   svg.append(defs);
-  svg.append(svgElement('rect', { x: 0, y: 0, width: 450, height: 500, rx: 8, class: 'board-background', fill: `url(#${prefix}-wood)` }));
+  svg.append(svgElement('rect', { x: 0, y: 0, width: 500, height: 550, rx: 8, class: 'board-background', fill: `url(#${prefix}-wood)` }));
   const lines = svgElement('g', { class: 'board-lines' });
   for (let rank = 0; rank < 10; rank += 1) {
     const start = point(0, rank); const end = point(8, rank);
@@ -69,20 +69,20 @@ function renderBoard(svg, board, flipped, onSquare, selected = null, hints = [],
     lines.append(svgElement('line', { x1: a.x, y1: a.y, x2: b.x, y2: b.y, class: 'board-line' }));
   }
   svg.append(lines);
-  svg.append(svgElement('rect', { x: 44, y: 229, width: 362, height: 40, class: 'board-river-band' }));
-  const leftRiver = svgElement('text', { x: 89, y: 258, class: 'board-river', 'text-anchor': 'middle' }); leftRiver.textContent = '楚 河'; svg.append(leftRiver);
-  const rightRiver = svgElement('text', { x: 361, y: 258, class: 'board-river', 'text-anchor': 'middle' }); rightRiver.textContent = '漢 界'; svg.append(rightRiver);
-  svg.append(svgElement('rect', { x: 161, y: 237, width: 128, height: 24, rx: 12, class: 'board-brand-pill' }));
-  const brandText = svgElement('text', { x: 225, y: 255, class: 'board-brand', 'text-anchor': 'middle' }); brandText.textContent = '楚河漢界'; svg.append(brandText);
+  svg.append(svgElement('rect', { x: 51, y: 263, width: 398, height: 28, class: 'board-river-band' }));
+  const leftRiver = svgElement('text', { x: 112, y: 284, class: 'board-river', 'text-anchor': 'middle' }); leftRiver.textContent = '楚 河'; svg.append(leftRiver);
+  const rightRiver = svgElement('text', { x: 388, y: 284, class: 'board-river', 'text-anchor': 'middle' }); rightRiver.textContent = '漢 界'; svg.append(rightRiver);
+  svg.append(svgElement('rect', { x: 190, y: 267, width: 120, height: 20, rx: 10, class: 'board-brand-pill' }));
+  const brandText = svgElement('text', { x: 250, y: 282, class: 'board-brand', 'text-anchor': 'middle' }); brandText.textContent = '楚河漢界'; svg.append(brandText);
   const redDigits = '一二三四五六七八九';
   const topSide = flipped ? RED : BLACK;
   const bottomSide = otherSide(topSide);
   for (let file = 0; file < 9; file += 1) {
     const boardFile = flipped ? 8 - file : file;
-    const topLabel = svgElement('text', { x: point(file, 0).x, y: 23, class: `board-coordinate ${topSide}`, 'text-anchor': 'middle', 'aria-hidden': 'true' });
+    const topLabel = svgElement('text', { x: point(file, 0).x, y: 29, class: `board-coordinate ${topSide}`, 'text-anchor': 'middle', 'aria-hidden': 'true' });
     topLabel.textContent = topSide === BLACK ? String(boardFile + 1) : redDigits[boardFile];
     svg.append(topLabel);
-    const bottomLabel = svgElement('text', { x: point(file, 0).x, y: 485, class: `board-coordinate ${bottomSide}`, 'text-anchor': 'middle', 'aria-hidden': 'true' });
+    const bottomLabel = svgElement('text', { x: point(file, 0).x, y: 536, class: `board-coordinate ${bottomSide}`, 'text-anchor': 'middle', 'aria-hidden': 'true' });
     bottomLabel.textContent = bottomSide === BLACK ? String(9 - boardFile) : redDigits[8 - boardFile];
     svg.append(bottomLabel);
   }
@@ -93,23 +93,24 @@ function renderBoard(svg, board, flipped, onSquare, selected = null, hints = [],
     const threatStatus = threatened.get(square);
     if (piece) {
       const side = sideOf(piece);
-      if (threatStatus) svg.append(svgElement('circle', { cx: x, cy: y, r: 22.5, class: `threat-ring ${threatStatus}` }));
-      svg.append(svgElement('circle', { cx: x, cy: y + 1, r: 19.5, class: 'piece-shadow', filter: `url(#${prefix}-piece-shadow)` }));
-      svg.append(svgElement('circle', { cx: x, cy: y, r: 19, class: `piece-rim ${side}`, fill: `url(#${prefix}-gold-rim)` }));
-      svg.append(svgElement('circle', { cx: x, cy: y - 0.5, r: 16.9, class: `piece-disc ${side}`, fill: `url(#${prefix}-${side}-face)` }));
-      svg.append(svgElement('circle', { cx: x, cy: y - 0.5, r: 14.3, class: `piece-inset ${side}` }));
-      const textShadow = svgElement('text', { x: x + 0.7, y: y + 1.9, class: 'piece-label-shadow' }); textShadow.textContent = labels[piece]; svg.append(textShadow);
+      if (threatStatus) svg.append(svgElement('circle', { cx: x, cy: y, r: 30, class: `threat-ring ${threatStatus}` }));
+      svg.append(svgElement('circle', { cx: x, cy: y + 5, r: 27, class: 'piece-shadow', filter: `url(#${prefix}-piece-shadow)` }));
+      svg.append(svgElement('circle', { cx: x, cy: y + 3.5, r: 24.8, class: 'piece-side', fill: `url(#${prefix}-piece-side)` }));
+      svg.append(svgElement('circle', { cx: x, cy: y, r: 24.8, class: `piece-rim ${side}`, fill: `url(#${prefix}-gold-rim)` }));
+      svg.append(svgElement('circle', { cx: x, cy: y - 0.8, r: 22.2, class: `piece-disc ${side}`, fill: `url(#${prefix}-${side}-face)` }));
+      svg.append(svgElement('circle', { cx: x, cy: y - 0.8, r: 19.3, class: `piece-inset ${side}` }));
+      const textShadow = svgElement('text', { x: x + 1, y: y + 2.3, class: 'piece-label-shadow' }); textShadow.textContent = labels[piece]; svg.append(textShadow);
       const text = svgElement('text', { x, y: y + 0.2, class: `piece-label ${side}` }); text.textContent = labels[piece]; svg.append(text);
-      svg.append(svgElement('path', { d: `M ${x - 9} ${y - 12} Q ${x - 4} ${y - 16} ${x + 3} ${y - 14}`, class: `piece-glint ${side}` }));
+      svg.append(svgElement('path', { d: `M ${x - 13} ${y - 16} Q ${x - 6} ${y - 23} ${x + 5} ${y - 20}`, class: `piece-glint ${side}` }));
     }
-    if (square === selected) svg.append(svgElement('circle', { cx: x, cy: y, r: 22, fill: 'none', stroke: '#40805d', 'stroke-width': 2.5, 'pointer-events': 'none' }));
+    if (square === selected) svg.append(svgElement('circle', { cx: x, cy: y, r: 28, fill: 'none', stroke: '#40805d', 'stroke-width': 2.5, 'pointer-events': 'none' }));
     if (lastMove?.from === square) {
       svg.append(svgElement('circle', { cx: x, cy: y, r: 9, class: 'last-move-origin-ring' }));
       svg.append(svgElement('circle', { cx: x, cy: y, r: 4, class: 'last-move-origin' }));
     }
-    if (lastMove?.to === square) svg.append(svgElement('circle', { cx: x, cy: y, r: 22.5, class: 'last-move-destination' }));
+    if (lastMove?.to === square) svg.append(svgElement('circle', { cx: x, cy: y, r: 30, class: 'last-move-destination' }));
     const threatDescription = threatStatus === 'protected' ? '，受到己方保护' : threatStatus === 'exposed' ? '，无保护且可能被吃' : '';
-    const hit = svgElement('rect', { x: x - 22, y: y - 22, width: 44, height: 44, class: 'board-hit', tabindex: '0', role: 'gridcell', 'aria-label': `${toICCS(square)}${piece ? ` ${labels[piece]}${threatDescription}` : ''}` });
+    const hit = svgElement('rect', { x: x - 26, y: y - 26, width: 52, height: 52, class: 'board-hit', tabindex: '0', role: 'gridcell', 'aria-label': `${toICCS(square)}${piece ? ` ${labels[piece]}${threatDescription}` : ''}` });
     hit.dataset.square = String(square); svg.append(hit);
   }
   svg.onclick = (event) => { const target = event.target.closest('[data-square]'); if (target) onSquare(Number(target.dataset.square)); };
