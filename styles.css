@@ -31,6 +31,7 @@
 .board-river-band{fill:#d2ae79;opacity:.88}
 .board-river{font-family:'Noto Serif SC',serif;fill:#8d714e;font-size:17px;font-weight:700;letter-spacing:3px;opacity:.8}
 .board-coordinate{font-family:'Noto Serif SC',serif;font-size:10px;font-weight:600;pointer-events:none}.board-coordinate.black{fill:#4f4434}.board-coordinate.red{fill:#9e4937}
+.history-ply strong{color:inherit}.history-ply.red{color:#b6402f}.history-ply.black{color:#343832}.history-ply.active{background:#e8f0e8}
 .board-brand-pill{fill:#b99662;opacity:.68}
 .board-brand{font-family:'Noto Serif SC',serif;fill:#f3dfb2;font-size:16px;font-weight:700;letter-spacing:2px}
 .piece-shadow{fill:#49331d;opacity:.48}

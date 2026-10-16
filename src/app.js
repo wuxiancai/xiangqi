@@ -301,8 +301,8 @@ function renderHistory() {
   const container = $('#play-history'); container.replaceChildren();
   if (!state.history.length) { const empty = document.createElement('span'); empty.className = 'move-empty'; empty.textContent = '棋局尚未开始'; container.append(empty); return; }
   state.history.forEach(({ move, captured, previousBoard, previousSide }, index) => {
-    const item = document.createElement('span'); item.className = `history-ply${index === state.history.length - 1 ? ' active' : ''}`;
-    const number = document.createElement('strong'); number.textContent = `${Math.floor(index / 2) + 1}${index % 2 ? '...' : '.'}`;
+    const item = document.createElement('span'); item.className = `history-ply ${previousSide}${index === state.history.length - 1 ? ' active' : ''}`;
+    const number = document.createElement('strong'); number.textContent = `${Math.floor(index / 2) + 1}.`;
     const notation = document.createElement('span'); notation.textContent = `${chineseNotation(previousBoard, move, previousSide)}${captured ? ' ×' : ''}`;
     item.append(number, notation); container.append(item);
   });
