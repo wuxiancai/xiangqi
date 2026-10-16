@@ -349,6 +349,8 @@ async function convertAndImport() {
   const button = $('#convert-import');
   button.disabled = true;
   try {
+    $('#import-status').textContent = '正在逐着校验并转换棋谱…';
+    await new Promise((resolve) => requestAnimationFrame(resolve));
     const record = convertTextToRecord($('#import-text').value, { title: $('#import-title').value, sourceName: pendingImportSource });
     const normalized = { ...record, ...(pendingXqfMetadata ? { players: pendingXqfMetadata.players, result: pendingXqfMetadata.result } : {}), userImported: true };
     if (state.records.some((item) => item.id === normalized.id)) throw new Error('棋谱 ID 已存在');

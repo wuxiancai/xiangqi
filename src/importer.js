@@ -77,20 +77,34 @@ async function extractPdf(file, onProgress) {
   pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs';
   const pdf = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise;
   const pages = [];
-  for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
-    onProgress(`正在读取 PDF 第 ${pageNumber}/${pdf.numPages} 页…`);
-    const page = await pdf.getPage(pageNumber);
-    const content = await page.getTextContent();
-    const text = content.items.map((item) => item.str).join(' ');
-    if (text.trim()) pages.push(text);
-    else {
-      const viewport = page.getViewport({ scale: 1.8 });
-      const canvas = document.createElement('canvas');
-      canvas.width = viewport.width; canvas.height = viewport.height;
-      await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
-      const worker = await createOcrWorker(onProgress);
-      try { pages.push((await worker.recognize(canvas)).data.text); } finally { await worker.terminate(); }
+  let worker;
+  let currentPage = 0;
+  try {
+    for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+      currentPage = pageNumber;
+      onProgress(`正在提取 PDF 第 ${pageNumber}/${pdf.numPages} 页…`);
+      const page = await pdf.getPage(pageNumber);
+      try {
+        const content = await page.getTextContent();
+        const text = content.items.map((item) => item.str).join(' ');
+        if (text.trim()) pages.push(text);
+        else {
+          const viewport = page.getViewport({ scale: 1.5 });
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.ceil(viewport.width); canvas.height = Math.ceil(viewport.height);
+          await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+          worker ??= await createOcrWorker((message) => onProgress(`正在 OCR PDF 第 ${currentPage}/${pdf.numPages} 页：${message}`));
+          pages.push((await worker.recognize(canvas)).data.text);
+          canvas.width = 0;
+          canvas.height = 0;
+        }
+      } finally {
+        page.cleanup();
+      }
     }
+  } finally {
+    await worker?.terminate();
+    await pdf.destroy();
   }
   return pages.join('\n');
 }
@@ -105,14 +119,14 @@ export function convertTextToRecord(text, { title, sourceName }) {
   let side = startingPosition.side;
   const moves = [];
   for (const rawToken of tokens) {
+    const legal = legalMoves(board, side);
     let move;
     if (/^[a-i][0-9][a-i][0-9]$/.test(rawToken)) {
       move = { from: (rawToken.charCodeAt(0) - 97) + Number(rawToken[1]) * 9, to: (rawToken.charCodeAt(2) - 97) + Number(rawToken[3]) * 9 };
     } else {
       const candidate = normalize(rawToken);
-      move = legalMoves(board, side).find((option) => normalize(chineseNotation(board, option, side)) === candidate);
+      move = legal.find((option) => normalize(chineseNotation(board, option, side)) === candidate);
     }
-    const legal = legalMoves(board, side);
     if (!move || !legal.some((option) => option.from === move.from && option.to === move.to) || sideOf(board[move.from]) !== side) {
       throw new Error(`第 ${moves.length + 1} 着无法匹配合法着法：“${rawToken}”；请检查文本顺序、记谱或 OCR`);
     }
