@@ -5,6 +5,7 @@ import { chineseNotation } from './notation.js';
 import { adjudicateRepetition } from './repetition.js';
 import { playMoveSound } from './audio.js';
 import { convertTextToRecord, extractText, MAX_IMPORT_SIZE } from './importer.js';
+import { parseXqf, xqfMovesAsText } from './xqf.js';
 
 const categories = ['古谱', '现代对局', '开局', '残局'];
 const labels = { K: '帥', A: '仕', E: '相', R: '車', H: '馬', C: '炮', P: '兵', k: '將', a: '士', e: '象', r: '車', h: '馬', c: '炮', p: '卒' };
@@ -259,18 +260,29 @@ async function importJsonFile(file) {
 }
 
 let pendingImportSource = '';
+let pendingXqfMetadata = null;
 async function importFile(file) {
   if (!file) return;
+  if (file.size > MAX_IMPORT_SIZE) { toast('文件超过 500 MiB 上限'); $('#import-file').value = ''; return; }
   if (file.name.toLowerCase().endsWith('.json')) return importJsonFile(file);
   try {
     $('#import-status').textContent = '正在提取棋谱内容…';
     $('#import-text').value = '';
     $('#import-title').value = file.name.replace(/\.[^.]+$/, '');
     pendingImportSource = file.name;
+    pendingXqfMetadata = null;
     $('#import-dialog').showModal();
-    const text = await extractText(file, (message) => { $('#import-status').textContent = message; });
+    let text;
+    if (file.name.toLowerCase().endsWith('.xqf')) {
+      pendingXqfMetadata = parseXqf(await file.arrayBuffer(), file.name);
+      text = xqfMovesAsText(pendingXqfMetadata);
+      $('#import-title').value = pendingXqfMetadata.title;
+      $('#import-status').textContent = `已解码 XQF 主线共 ${pendingXqfMetadata.moves.length} 着；请检查后逐着进行规则校验。`;
+    } else {
+      text = await extractText(file, (message) => { $('#import-status').textContent = message; });
+    }
     $('#import-text').value = text;
-    $('#import-status').textContent = '请检查识别文本；将按标准开局逐着匹配并验证合法性。';
+    if (!pendingXqfMetadata) $('#import-status').textContent = '请检查识别文本；棋谱将逐着匹配并验证合法性。';
   } catch (error) {
     $('#import-dialog').close();
     toast(`读取失败：${error.message}`);
@@ -284,12 +296,13 @@ async function convertAndImport() {
   button.disabled = true;
   try {
     const record = convertTextToRecord($('#import-text').value, { title: $('#import-title').value, sourceName: pendingImportSource });
-    const normalized = { ...record, userImported: true };
+    const normalized = { ...record, ...(pendingXqfMetadata ? { players: pendingXqfMetadata.players, result: pendingXqfMetadata.result } : {}), userImported: true };
     if (state.records.some((item) => item.id === normalized.id)) throw new Error('棋谱 ID 已存在');
     await recordRepository.put(normalized);
     await refreshRecords();
     loadRecord(normalized);
     $('#import-dialog').close();
+    pendingXqfMetadata = null;
     toast(`已转换并导入棋谱，共 ${normalized.moves.length} 着`);
   } catch (error) {
     $('#import-status').textContent = error.message;

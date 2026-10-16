@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { convertTextToRecord, extractText, MAX_IMPORT_SIZE } from '../src/importer.js';
+import { parseXqf, xqfMovesAsText } from '../src/xqf.js';
 import { validateAndReplay } from '../src/rules.js';
 
 test('converts Chinese red/black notation into validated ICCS moves', () => {
@@ -35,4 +36,55 @@ test('accepts files up to 500 MiB and rejects larger imports', async () => {
   assert.equal(await extractText(boundaryFile), '1. 炮二平五');
   const oversizedFile = { ...boundaryFile, size: MAX_IMPORT_SIZE + 1 };
   await assert.rejects(extractText(oversizedFile), /文件超过 500 MiB 上限/);
+});
+
+test('decodes an XQF 1.0 mainline and converts its move to a legal internal record', () => {
+  const bytes = new Uint8Array(1024 + 24);
+  bytes.set([0x58, 0x51, 0x0a]);
+  bytes[0x40] = 0;
+  bytes.set([0x18, 0x20, 0xf0, 0xff], 1024);
+  bytes.set([47, 56, 0, 0], 1032);
+  const parsed = parseXqf(bytes.buffer, 'opening.xqf');
+  assert.equal(parsed.moves.length, 1);
+  assert.equal(parsed.moves[0].from, 'c6');
+  assert.equal(parsed.moves[0].to, 'c5');
+  const record = convertTextToRecord(xqfMovesAsText(parsed), { title: parsed.title, sourceName: 'opening.xqf' });
+  assert.equal(record.initialPosition.fen.endsWith(' w'), true);
+  assert.deepEqual(record.moves, [{ from: 'c6', to: 'c5' }]);
+  assert.equal(validateAndReplay(record).positions.length, 2);
+});
+
+test('rejects truncated or invalid XQF data', () => {
+  assert.throws(() => parseXqf(new ArrayBuffer(32)), /文件头无效/);
+  const bytes = new Uint8Array(1032);
+  bytes.set([0x58, 0x51, 0x0a]);
+  assert.throws(() => parseXqf(bytes.buffer), /XQF 文件没有棋谱着法/);
+});
+
+test('decrypts a version 1.1 XQF move stream', () => {
+  const bytes = new Uint8Array(1024 + 8);
+  bytes.set([0x58, 0x51, 0x0b]);
+  bytes.set([1, 2, 3, 4], 8);
+  const key = [1, 2, 3, 4];
+  const mask = '[(C) Copyright Mr. Dong Shiwei.]';
+  const stream = Array.from({ length: 32 }, (_, index) => key[index % 4] & mask.charCodeAt(index));
+  const offset = { index: 1024, stream: 0 };
+  const encode = (values) => values.forEach((value) => {
+    bytes[offset.index] = (value + stream[offset.stream]) & 0xff;
+    offset.index += 1;
+    offset.stream = (offset.stream + 1) % 32;
+  });
+  encode([0x18, 0x20, 0x80, 0xff]);
+  encode([47, 56, 0, 0]);
+  const parsed = parseXqf(bytes.buffer);
+  assert.deepEqual(parsed.moves.map(({ from, to }) => [from, to]), [['c6', 'c5']]);
+});
+
+test('extractText recognizes XQF binary files without text decoding', async () => {
+  const bytes = new Uint8Array(1048);
+  bytes.set([0x58, 0x51, 0x0a]);
+  bytes.set([0x18, 0x20, 0xf0, 0xff], 1024);
+  bytes.set([47, 56, 0, 0], 1032);
+  const text = await extractText({ name: 'opening.XQF', size: bytes.byteLength, arrayBuffer: async () => bytes.buffer });
+  assert.match(text, /\bc6c5\b/);
 });

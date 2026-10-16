@@ -27,11 +27,11 @@ npm test
 - 已实现本地双人、本地搜索 AI（默认最强；迭代加深、置换表、主变/历史着法排序、吃子延伸及位置评分）、兼容 Chat Completions API 的建议接口、着法合法性检查及本地降级；AI 棋力尚未经对局基准认证。
 - 对方可合法吃子的棋子按己方回吃保护状态提示：有保护为红圈，无保护为绿圈；普通落子播放清脆音调，吃子播放低音加双重木击声，红黑双方一致。
 - 内置库当前收录 36 盘现代大师对局和 40 盘残局，共 76 盘，着法均通过规则校验。现代/残局数据源为 [Chinese Chess Practical Dataset（CC BY 4.0）](https://github.com/Yvonne761/Chinese-Chess-Practical-Dataset)，来源、版本和归属见 `data/ATTRIBUTION.md`。古谱《梅花谱》《橘中秘》《适情雅趣》尚未录入；100 盘首版目标未达成，不应将当前版本视为完整内容交付。
-- 多格式导入详见下方说明；旧版二进制 DOC、XQF、加密文档和棋盘截图局面识别暂不支持。
+- 多格式导入详见下方说明；旧版二进制 DOC、加密文档和棋盘截图局面识别暂不支持。
 - 内置 AI 棋力未经认证；API 模型强度无法与引擎等级等同。API 密钥存于当前浏览器 IndexedDB，浏览器直连服务商存在密钥暴露与 CORS 限制。
 - 自托管静态文件可由 HTTPS 静态站点托管；首版无后端进程，因此无需 systemd 服务。
 ## 导入棋谱
 
-棋谱库支持导入 `xiangqi-study/v1` JSON，以及 TXT、Markdown、PGN/ICCS/FEN 文本、DOCX、PDF 和常见图片（PNG/JPEG/WebP/BMP/TIFF）。非 JSON 文件会先提取/识别文本，显示可编辑预览，再逐着转换为应用内部 JSON/ICCS 记录；所有着法都必须通过本地象棋规则校验，识别不清或非法时不会部分导入。单文件上限 500 MiB。
+棋谱库支持导入 `xiangqi-study/v1` JSON，以及 XQF、TXT、Markdown、PGN/ICCS/FEN 文本、DOCX、PDF 和常见图片（PNG/JPEG/WebP/BMP/TIFF）。XQF 会在本机解码，再逐着转换为可检查的 ICCS 坐标文本和内部记录；其他非 JSON 格式先提取/识别文本，显示可编辑预览后逐着校验。所有着法都必须通过本地象棋规则校验，非法时不会部分导入。单文件上限 500 MiB。
 
 PDF、DOCX 与图片解析组件在首次使用时从 jsDelivr 加载；中文 OCR 使用 Tesseract.js 与简体中文识别模型。文件内容在当前浏览器本地处理，不会上传。扫描 PDF 会逐页 OCR。旧版二进制 DOC、加密文档以及未列出的专有格式需先转为支持的格式；棋谱图片须清晰展示可识别的中文记谱，棋盘局面截图暂不自动识别为着法。

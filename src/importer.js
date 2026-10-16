@@ -1,5 +1,6 @@
 import { BLACK, RED, applyMove, initialBoard, legalMoves, otherSide, parseFEN, sideOf, toICCS, validateAndReplay } from './rules.js';
 import { chineseNotation } from './notation.js';
+import { parseXqf, xqfMovesAsText } from './xqf.js';
 
 export const MAX_IMPORT_SIZE = 500 * 1024 * 1024;
 const tokenPattern = /[a-i][0-9][a-i][0-9]|(?:[前中后](?:车|車|马|馬|炮|兵|卒|帅|帥|将|將|相|象|仕|士)(?:进|進|退|平)[一二三四五六七八九1-9])|(?:(?:车|車|马|馬|炮|兵|卒|帅|帥|将|將|相|象|仕|士)[一二三四五六七八九1-9](?:进|進|退|平)[一二三四五六七八九1-9])/g;
@@ -11,6 +12,7 @@ export async function extractText(file, onProgress = () => {}) {
   if (file.size > MAX_IMPORT_SIZE) throw new Error('文件超过 500 MiB 上限');
   const extension = file.name.split('.').at(-1).toLowerCase();
   if (extension === 'json') throw new Error('JSON 棋谱请使用 JSON 导入流程');
+  if (extension === 'xqf') return xqfMovesAsText(parseXqf(await file.arrayBuffer(), file.name));
   if (['txt', 'md', 'pgn', 'iccs', 'fen', 'cpx'].includes(extension)) return await file.text();
   if (extension === 'docx') {
     onProgress('正在读取 Word 文档…');
@@ -61,7 +63,8 @@ async function extractPdf(file, onProgress) {
 export function convertTextToRecord(text, { title, sourceName }) {
   const fenMatch = text.match(/((?:[rnbakcpRNBAKCP1-9]+\/){9}[rnbakcpRNBAKCP1-9]+\s+[wb](?:\s+\d+){0,2})/);
   const startingPosition = fenMatch ? parseFEN(fenMatch[1]) : { board: initialBoard(), side: RED };
-  const tokens = [...text.matchAll(tokenPattern)].map((match) => match[0]);
+  const moveText = fenMatch ? text.replace(fenMatch[0], '') : text;
+  const tokens = [...moveText.matchAll(tokenPattern)].map((match) => match[0]);
   if (!tokens.length) throw new Error('没有识别到棋谱着法；可在文本框修正 OCR 结果后重试');
   let board = startingPosition.board;
   let side = startingPosition.side;
