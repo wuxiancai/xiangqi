@@ -516,6 +516,7 @@ function setView(view) {
   stopPlayback(); state.view = view;
   document.querySelectorAll('.nav-button').forEach((button) => button.classList.toggle('active', button.dataset.view === view));
   document.querySelectorAll('.view').forEach((node) => node.classList.toggle('active', node.id === `${view}-view`));
+  $('#study-header-actions').hidden = view !== 'study';
   if (view === 'play') renderPlayBoard();
 }
 

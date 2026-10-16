@@ -17,12 +17,15 @@
         <button class="nav-button active" data-view="study">棋谱学习</button>
         <button class="nav-button" data-view="play">开始对弈</button>
       </nav>
+      <div id="study-header-actions" class="study-header-actions">
+        <div class="study-header-copy"><p class="eyebrow">STUDY LIBRARY</p><h1>从一着棋，读懂整盘棋</h1><p class="subtitle">导入棋谱，逐步回放关键变化。</p></div>
+        <div class="import-actions"><label class="import-button">导入棋谱<input id="import-file" type="file" accept=".json,.txt,.md,.pgn,.iccs,.fen,.cpx,.xqf,.cbl,.doc,.docx,.pdf,.png,.jpg,.jpeg,.webp,.bmp,.tif,.tiff,application/json,text/plain,text/markdown,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/*" hidden></label><label class="import-button secondary-import">导入文件夹<input id="import-folder" type="file" webkitdirectory directory multiple accept=".xqf,.cbl" hidden></label><p id="folder-import-status" class="folder-import-status" role="status" aria-live="polite" hidden></p></div>
+      </div>
       <button id="settings-button" class="quiet-button">设置</button>
     </header>
 
     <main>
       <section id="study-view" class="view active">
-        <div class="page-heading"><div><p class="eyebrow">STUDY LIBRARY</p><h1>从一着棋，读懂整盘棋</h1><p class="subtitle">导入棋谱，逐步回放关键变化。</p></div><div class="import-actions"><label class="import-button">导入棋谱<input id="import-file" type="file" accept=".json,.txt,.md,.pgn,.iccs,.fen,.cpx,.xqf,.cbl,.doc,.docx,.pdf,.png,.jpg,.jpeg,.webp,.bmp,.tif,.tiff,application/json,text/plain,text/markdown,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/*" hidden></label><label class="import-button secondary-import">导入文件夹<input id="import-folder" type="file" webkitdirectory directory multiple accept=".xqf,.cbl" hidden></label><p id="folder-import-status" class="folder-import-status" role="status" aria-live="polite" hidden></p></div></div>
         <div class="study-layout">
           <aside class="library-panel panel">
             <div class="panel-title"><div><h2>棋谱库</h2><span id="library-count" class="muted">0 盘</span></div><button id="export-button" class="icon-button" aria-label="导出本机数据" title="导出本机数据">↥</button></div>
