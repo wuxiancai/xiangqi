@@ -3,6 +3,7 @@ import { chooseLocalMoveAsync, requestSuggestion } from './ai.js';
 import { loadSettings, recordRepository, saveSettings } from './storage.js';
 import { chineseNotation } from './notation.js';
 import { adjudicateRepetition } from './repetition.js';
+import { playMoveSound } from './audio.js';
 import { convertTextToRecord, extractText } from './importer.js';
 
 const categories = ['古谱', '现代对局', '开局', '残局'];
@@ -28,35 +29,6 @@ function unlockMoveAudio() {
   if (!AudioContextClass) return;
   try { moveAudio ??= new AudioContextClass(); } catch { return; }
   if (moveAudio.state === 'suspended') moveAudio.resume().catch(() => {});
-}
-
-function playMoveSound(captured = false) {
-  if (!moveAudio || moveAudio.state !== 'running') return;
-  const now = moveAudio.currentTime;
-  const tone = moveAudio.createOscillator();
-  const volume = moveAudio.createGain();
-  tone.type = 'triangle';
-  tone.frequency.setValueAtTime(captured ? 330 : 480, now);
-  tone.frequency.exponentialRampToValueAtTime(captured ? 145 : 220, now + 0.075);
-  volume.gain.setValueAtTime(0.0001, now);
-  volume.gain.exponentialRampToValueAtTime(captured ? 0.16 : 0.11, now + 0.008);
-  volume.gain.exponentialRampToValueAtTime(0.0001, now + 0.09);
-  tone.connect(volume).connect(moveAudio.destination);
-  tone.start(now);
-  tone.stop(now + 0.095);
-  if (captured) {
-    const impact = moveAudio.createOscillator();
-    const impactVolume = moveAudio.createGain();
-    impact.type = 'sine';
-    impact.frequency.setValueAtTime(110, now);
-    impact.frequency.exponentialRampToValueAtTime(65, now + 0.12);
-    impactVolume.gain.setValueAtTime(0.0001, now);
-    impactVolume.gain.exponentialRampToValueAtTime(0.14, now + 0.006);
-    impactVolume.gain.exponentialRampToValueAtTime(0.0001, now + 0.13);
-    impact.connect(impactVolume).connect(moveAudio.destination);
-    impact.start(now);
-    impact.stop(now + 0.14);
-  }
 }
 
 function mapSquare(square, flipped) {
@@ -228,7 +200,7 @@ function stepStudy(delta) {
   const nextPly = Math.max(0, Math.min(state.currentRecord.moves.length, state.studyPly + delta));
   if (delta > 0 && nextPly > state.studyPly) {
     const move = state.currentRecord.moves[nextPly - 1];
-    playMoveSound(Boolean(state.currentRecord.positions[state.studyPly][move.to]));
+  playMoveSound(moveAudio, Boolean(state.currentRecord.positions[state.studyPly][move.to]));
   }
   state.studyPly = nextPly;
   if (state.studyPly === state.currentRecord.moves.length) stopPlayback();
@@ -384,7 +356,7 @@ async function onPlaySquare(square) {
 
 async function playMove(move) {
   const captured = state.board[move.to];
-  playMoveSound(Boolean(captured));
+  playMoveSound(moveAudio, Boolean(captured));
   const previousBoard = state.board;
   state.board = applyMove(state.board, move);
   state.history.push({ move, captured, previousBoard, previousSide: state.side });
