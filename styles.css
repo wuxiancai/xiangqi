@@ -42,8 +42,8 @@
 .piece-label{font-family:'Noto Serif SC',serif;font-weight:800;font-size:22px;text-anchor:middle;dominant-baseline:central;pointer-events:none;paint-order:stroke;stroke-width:.4px}
 .piece-label.red{fill:#a62f24;stroke:#f3d69e}
 .piece-label.black{fill:#211f1c;stroke:#e8d7b2}
-.threat-ring.red{fill:#ed443d;fill-opacity:.27;stroke:#e33e35;filter:drop-shadow(0 0 5px #ee413d99)}
-.threat-ring.black{fill:#42d963;fill-opacity:.23;stroke:#39bf50;filter:drop-shadow(0 0 5px #37da5b99)}
+.threat-ring.protected{fill:#ed443d;fill-opacity:.27;stroke:#e33e35;filter:drop-shadow(0 0 5px #ee413d99)}
+.threat-ring.exposed{fill:#42d963;fill-opacity:.23;stroke:#39bf50;filter:drop-shadow(0 0 5px #37da5b99)}
 .board-legend{gap:7px}
 .threat-key.red{border-color:#e33e35;background:#ed443d38;box-shadow:0 0 5px #ee413d55}
 .threat-key.green{border-color:#258552;background:#4dba7b38;box-shadow:0 0 5px #2e9a6255}

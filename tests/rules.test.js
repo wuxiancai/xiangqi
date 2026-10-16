@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { BLACK, RED, capturablePieces, coord, fromICCS, initialBoard, isInCheck, legalMoves, gameStatus, applyMove, parseFEN, toICCS, validateAndReplay } from '../src/rules.js';
+import { BLACK, RED, capturablePieces, coord, fromICCS, initialBoard, isInCheck, legalMoves, gameStatus, applyMove, parseFEN, pieceThreatStatus, toICCS, validateAndReplay } from '../src/rules.js';
 import { adjudicateRepetition } from '../src/repetition.js';
 
 test('three repeated cycles of unilateral perpetual check lose, while mutual checking does not trigger this ruling', () => {
@@ -47,6 +47,17 @@ test('a piece with a legal friendly recapture is not marked as hanging', () => {
   put(board, 1, 9, 'H'); put(board, 0, 9, 'R');
   assert.ok(legalMoves(board, BLACK).some((move) => move.from === coord(1, 0) && move.to === coord(1, 9)));
   assert.equal(capturablePieces(board).has(coord(1, 9)), false);
+});
+
+test('threat display distinguishes protected pieces from exposed pieces', () => {
+  const board = emptyBoard();
+  put(board, 4, 9, 'K'); put(board, 3, 0, 'k');
+  put(board, 0, 0, 'r'); put(board, 0, 5, 'H');
+  assert.equal(pieceThreatStatus(board).get(coord(0, 5)), 'exposed');
+
+  put(board, 0, 9, 'R');
+  assert.equal(pieceThreatStatus(board).get(coord(0, 5)), 'protected');
+  assert.equal(capturablePieces(board).has(coord(0, 5)), false);
 });
 
 test('rook cannot pass a blocker, cannon needs exactly one screen to capture', () => {

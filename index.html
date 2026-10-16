@@ -56,7 +56,7 @@
           <section class="play-board-column panel">
             <div class="board-header"><div><span class="live-dot"></span><span id="play-status">红方走棋</span></div><button id="play-flip" class="text-button">翻转棋盘</button></div>
             <div class="board-frame"><svg id="play-board" class="chessboard" viewBox="0 0 450 500" role="grid" aria-label="对弈棋盘"></svg></div>
-            <div class="board-legend"><span class="threat-key red" aria-hidden="true"></span><span>红方棋子可能被吃</span><span class="threat-key green" aria-hidden="true"></span><span>黑方棋子可能被吃</span></div>
+            <div class="board-legend"><span class="threat-key red" aria-hidden="true"></span><span>有己方棋子保护</span><span class="threat-key green" aria-hidden="true"></span><span>无保护，可能被吃</span></div>
             <div class="play-actions"><button id="undo-button" class="secondary-button">悔棋</button><button id="restart-button" class="secondary-button">重新开始</button><button id="suggest-button" class="secondary-button">局势建议</button></div>
             <div id="ai-output" class="ai-output" aria-live="polite">AI 建议仅供参考，所有推荐着法都会经过本地规则校验。</div>
           </section>

@@ -1,4 +1,4 @@
-import { BLACK, RED, applyMove, capturablePieces, fileOf, gameStatus, initialBoard, isInCheck, kindOf, legalMoves, otherSide, rankOf, sameMove, sideOf, toICCS, validateAndReplay } from './rules.js';
+import { BLACK, RED, applyMove, fileOf, gameStatus, initialBoard, isInCheck, kindOf, legalMoves, otherSide, pieceThreatStatus, rankOf, sameMove, sideOf, toICCS, validateAndReplay } from './rules.js';
 import { chooseLocalMoveAsync, requestSuggestion } from './ai.js';
 import { loadSettings, recordRepository, saveSettings } from './storage.js';
 import { chineseNotation } from './notation.js';
@@ -44,6 +44,19 @@ function playMoveSound(captured = false) {
   tone.connect(volume).connect(moveAudio.destination);
   tone.start(now);
   tone.stop(now + 0.095);
+  if (captured) {
+    const impact = moveAudio.createOscillator();
+    const impactVolume = moveAudio.createGain();
+    impact.type = 'sine';
+    impact.frequency.setValueAtTime(110, now);
+    impact.frequency.exponentialRampToValueAtTime(65, now + 0.12);
+    impactVolume.gain.setValueAtTime(0.0001, now);
+    impactVolume.gain.exponentialRampToValueAtTime(0.14, now + 0.006);
+    impactVolume.gain.exponentialRampToValueAtTime(0.0001, now + 0.13);
+    impact.connect(impactVolume).connect(moveAudio.destination);
+    impact.start(now);
+    impact.stop(now + 0.14);
+  }
 }
 
 function mapSquare(square, flipped) {
@@ -56,7 +69,7 @@ function svgElement(name, attributes = {}) {
   return node;
 }
 
-function renderBoard(svg, board, flipped, onSquare, selected = null, hints = [], lastMove = null, threatened = new Set()) {
+function renderBoard(svg, board, flipped, onSquare, selected = null, hints = [], lastMove = null, threatened = new Map()) {
   svg.replaceChildren();
   const prefix = svg.id;
   const defs = svgElement('defs');
@@ -103,10 +116,10 @@ function renderBoard(svg, board, flipped, onSquare, selected = null, hints = [],
     const { file, rank } = mapSquare(square, flipped); const { x, y } = point(file, rank);
     if (hints.some((move) => move.to === square)) svg.append(svgElement('circle', { cx: x, cy: y, r: 7, class: 'legal-dot' }));
     const piece = board[square];
+    const threatStatus = threatened.get(square);
     if (piece) {
       const side = sideOf(piece);
-      const isThreatened = threatened.has(square);
-      if (isThreatened) svg.append(svgElement('circle', { cx: x, cy: y, r: 22.5, class: `threat-ring ${side}` }));
+      if (threatStatus) svg.append(svgElement('circle', { cx: x, cy: y, r: 22.5, class: `threat-ring ${threatStatus}` }));
       svg.append(svgElement('circle', { cx: x, cy: y + 1, r: 19.5, class: 'piece-shadow', filter: `url(#${prefix}-piece-shadow)` }));
       svg.append(svgElement('circle', { cx: x, cy: y, r: 19, class: `piece-rim ${side}`, fill: `url(#${prefix}-gold-rim)` }));
       svg.append(svgElement('circle', { cx: x, cy: y - 0.5, r: 16.9, class: `piece-disc ${side}`, fill: `url(#${prefix}-${side}-face)` }));
@@ -121,7 +134,8 @@ function renderBoard(svg, board, flipped, onSquare, selected = null, hints = [],
       svg.append(svgElement('circle', { cx: x, cy: y, r: 4, class: 'last-move-origin' }));
     }
     if (lastMove?.to === square) svg.append(svgElement('circle', { cx: x, cy: y, r: 22.5, class: 'last-move-destination' }));
-    const hit = svgElement('rect', { x: x - 22, y: y - 22, width: 44, height: 44, class: 'board-hit', tabindex: '0', role: 'gridcell', 'aria-label': `${toICCS(square)}${piece ? ` ${labels[piece]}${threatened.has(square) ? '，可能被对方下一步吃掉' : ''}` : ''}` });
+    const threatDescription = threatStatus === 'protected' ? '，受到己方保护' : threatStatus === 'exposed' ? '，无保护且可能被吃' : '';
+    const hit = svgElement('rect', { x: x - 22, y: y - 22, width: 44, height: 44, class: 'board-hit', tabindex: '0', role: 'gridcell', 'aria-label': `${toICCS(square)}${piece ? ` ${labels[piece]}${threatDescription}` : ''}` });
     hit.dataset.square = String(square); svg.append(hit);
   }
   svg.onclick = (event) => { const target = event.target.closest('[data-square]'); if (target) onSquare(Number(target.dataset.square)); };
@@ -332,7 +346,7 @@ function saveGame() {
 function renderPlayBoard() {
   const last = state.history.at(-1)?.move ?? null;
   const status = gameStatus(state.board, state.side);
-  renderBoard($('#play-board'), state.board, state.playFlipped, onPlaySquare, state.selectedSquare ?? null, state.selectedSquare == null ? [] : legalMoves(state.board, state.side).filter((move) => move.from === state.selectedSquare), last, capturablePieces(state.board));
+  renderBoard($('#play-board'), state.board, state.playFlipped, onPlaySquare, state.selectedSquare ?? null, state.selectedSquare == null ? [] : legalMoves(state.board, state.side).filter((move) => move.from === state.selectedSquare), last, pieceThreatStatus(state.board));
   const endStatus = state.adjudication ?? status;
   const endReason = state.adjudication ? '长将判负' : status.reason;
   $('#turn-label').textContent = state.gameOver ? `${names[endStatus.winner]}胜 · ${endReason}` : `${names[state.side]}走棋${status.inCheck ? ' · 将军' : ''}`;

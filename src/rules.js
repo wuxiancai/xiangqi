@@ -154,24 +154,29 @@ export function legalMoves(board, side) {
   return pseudoMoves(board, side).filter((move) => kindOf(board[move.to]) !== 'K' && !isInCheck(applyMove(board, move), side));
 }
 
-export function capturablePieces(board) {
-  const targets = new Set();
+export function pieceThreatStatus(board) {
+  const threats = new Map();
   for (const attacker of [RED, BLACK]) {
     for (const move of legalMoves(board, attacker)) {
       if (!board[move.to] || sideOf(board[move.to]) === attacker) continue;
       const afterCapture = applyMove(board, move);
       const defender = otherSide(attacker);
       const canRecapture = legalMoves(afterCapture, defender).some((reply) => reply.to === move.to);
-      if (!canRecapture) targets.add(move.to);
+      if (!canRecapture) threats.set(move.to, 'exposed');
+      else if (!threats.has(move.to)) threats.set(move.to, 'protected');
     }
   }
   for (const side of [RED, BLACK]) {
     if (isInCheck(board, side)) {
       const king = board.findIndex((piece) => kindOf(piece) === 'K' && sideOf(piece) === side);
-      if (king >= 0) targets.add(king);
+      if (king >= 0) threats.set(king, 'exposed');
     }
   }
-  return targets;
+  return threats;
+}
+
+export function capturablePieces(board) {
+  return new Set([...pieceThreatStatus(board)].filter(([, status]) => status === 'exposed').map(([square]) => square));
 }
 
 export function gameStatus(board, sideToMove) {
