@@ -71,12 +71,13 @@ body{line-height:1.5}
 .empty-state p,.source-note{font-size:11px}
 .board-header{font-size:13px}
 .text-button,.quiet-button{min-height:40px}
-.replay-panel-compact{padding:10px 12px;gap:8px 14px}
-.replay-panel-compact .control-button{width:44px;height:44px;font-size:13px}
-.replay-panel-compact .play-button{width:48px;height:48px;font-size:13px}
-.replay-panel-compact .speed-control{font-size:11px}
-.replay-panel-compact .move-progress{font-size:10px}
-.replay-panel-compact .annotation{font-size:11px;line-height:1.55}
+.replay-panel-compact{padding:7px 11px 8px;gap:4px 12px;border-color:#e7dfd0;background:linear-gradient(180deg,#fffefa,#fffdf8)}
+.replay-panel-compact .replay-controls{gap:6px}
+.replay-panel-compact .control-button{width:34px;height:34px;font-size:11px;border-radius:8px}
+.replay-panel-compact .play-button{width:40px;height:40px;font-size:11px}
+.replay-panel-compact .speed-control{font-size:10px}
+.replay-panel-compact .move-progress{font-size:9px}
+.replay-panel-compact .annotation{font-size:10px;line-height:1.4;border-color:#eee8dd;margin-top:1px;padding-top:5px}
 .move-number{font-size:11px}
 .move-item{min-height:38px;font-size:12px}
 .move-empty{font-size:12px}
@@ -88,7 +89,7 @@ button,.import-button,.game-card{transition:background-color .16s,border-color .
 button:active,.import-button:active{transform:translateY(1px)}
 @media(max-width:720px){
   .library-panel,.moves-panel,.setup-panel,.history-panel{padding:16px}
-  .replay-panel-compact{grid-template-columns:1fr;gap:8px;padding:10px}
+  .replay-panel-compact{grid-template-columns:1fr;gap:6px;padding:8px 10px}
   .replay-panel-compact .replay-controls{grid-column:1;grid-row:auto;justify-content:space-between;gap:6px}
   .replay-panel-compact .control-button{width:44px;height:44px;font-size:12px}
   .replay-panel-compact .play-button{width:48px;height:48px}
