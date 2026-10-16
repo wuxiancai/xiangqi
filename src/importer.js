@@ -4,6 +4,10 @@ import { parseXqf, xqfMovesAsText } from './xqf.js';
 import { cblMovesAsText, parseCbl } from './cbl.js';
 
 export const MAX_IMPORT_SIZE = 500 * 1024 * 1024;
+const sourceBasename = (name = '') => name.split(/[\\/]/).at(-1);
+export function findExistingImportedRecord(records, sourceName, title) {
+  return records.find((record) => record.userImported && sourceBasename(record.source?.name) === sourceBasename(sourceName) && record.title === title);
+}
 const tokenPattern = /[a-i][0-9][a-i][0-9]|(?:[前中后](?:车|車|马|馬|炮|兵|卒|帅|帥|将|將|相|象|仕|士)(?:进|進|退|平)[一二三四五六七八九1-9])|(?:(?:车|車|马|馬|炮|兵|卒|帅|帥|将|將|相|象|仕|士)[一二三四五六七八九1-9](?:进|進|退|平)[一二三四五六七八九1-9])/g;
 
 const normalize = (value) => value.replaceAll('車', '车').replaceAll('馬', '马').replaceAll('帥', '帅').replaceAll('將', '将').replaceAll('進', '进');
@@ -34,35 +38,34 @@ export async function extractText(file, onProgress = () => {}) {
 
 export async function importXqfFolderFiles(files, existingRecords = [], onProgress = () => {}) {
   const candidates = Array.from(files).filter((file) => /\.(xqf|cbl)$/i.test(file.name));
-  const knownSources = new Set(existingRecords.filter((record) => record.userImported).map((record) => record.source?.name).filter(Boolean));
   const records = [];
   const failures = [];
-  let duplicates = 0;
+  let overwritten = 0;
+  const addParsed = (parsed, sourceName, movesText) => {
+    const existing = findExistingImportedRecord(existingRecords, sourceName, parsed.title);
+    const record = convertTextToRecord(movesText, { title: parsed.title, sourceName });
+    records.push({ ...record, id: existing?.id ?? record.id, players: parsed.players, result: parsed.result, initialPosition: parsed.initialPosition ?? record.initialPosition, source: { ...record.source, name: sourceName }, userImported: true });
+    if (existing) overwritten += 1;
+  };
   for (let index = 0; index < candidates.length; index += 1) {
     const file = candidates[index];
     const sourceName = file.webkitRelativePath || file.name;
     onProgress({ current: index + 1, total: candidates.length, sourceName });
-    if (knownSources.has(sourceName)) { duplicates += 1; continue; }
     try {
       if (index % 5 === 0) await new Promise((resolve) => setTimeout(resolve, 0));
       if (file.size > MAX_IMPORT_SIZE) throw new Error('文件超过 500 MiB 上限');
       if (file.name.toLowerCase().endsWith('.cbl')) {
         const library = parseCbl(await file.arrayBuffer(), sourceName);
-        for (const parsed of library.records) {
-          const record = convertTextToRecord(cblMovesAsText(parsed), { title: parsed.title, sourceName });
-          records.push({ ...record, players: parsed.players, result: parsed.result, initialPosition: parsed.initialPosition, source: { ...record.source, name: sourceName }, userImported: true });
-        }
+        for (const parsed of library.records) try { addParsed(parsed, sourceName, cblMovesAsText(parsed)); } catch (error) { failures.push({ sourceName, title: parsed.title, message: error.message }); }
       } else {
         const parsed = parseXqf(await file.arrayBuffer(), file.name);
-        const record = convertTextToRecord(xqfMovesAsText(parsed), { title: parsed.title, sourceName });
-        records.push({ ...record, players: parsed.players, result: parsed.result, source: { ...record.source, name: sourceName }, userImported: true });
+        addParsed(parsed, sourceName, xqfMovesAsText(parsed));
       }
-      knownSources.add(sourceName);
     } catch (error) {
       failures.push({ sourceName, message: error.message });
     }
   }
-  return { records, failures, duplicates, total: candidates.length };
+  return { records, failures, overwritten, duplicates: 0, total: candidates.length };
 }
 
 async function createOcrWorker(onProgress) {

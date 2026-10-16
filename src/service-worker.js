@@ -1,5 +1,5 @@
-const CACHE_NAME = 'chuhe-shell-v18';
-const APP_SHELL = ['./', './index.html', './styles.css', './src/app.js', './src/audio.js', './src/importer.js', './src/xqf.js', './src/cbl.js', './src/rules.js', './src/notation.js', './src/repetition.js', './src/storage.js', './src/ai.js', './src/ai-worker.js', './data/records/modern-games.json'];
+const CACHE_NAME = 'chuhe-shell-v19';
+const APP_SHELL = ['./', './index.html', './styles.css', './styles-import.css', './src/app.js', './src/audio.js', './src/importer.js', './src/xqf.js', './src/cbl.js', './src/rules.js', './src/notation.js', './src/repetition.js', './src/storage.js', './src/ai.js', './src/ai-worker.js', './data/records/modern-games.json'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
@@ -13,7 +13,7 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const request = event.request;
-  if (request.method !== 'GET' || new URL(request.url).origin !== self.location.origin) return;
+  if (request.method !== 'GET' || new URL(request.url).origin !== self.location.origin || new URL(request.url).pathname.startsWith('/api/')) return;
   event.respondWith((async () => {
     const cache = await caches.open(CACHE_NAME);
     try {

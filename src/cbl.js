@@ -30,6 +30,16 @@ function boardFen(board) {
 function recordMoves(record, start) {
   const moves = [];
   let cursor = start;
+  if (cursor + 4 > record.length) throw new Error('CBL 开局注释字段不完整');
+  const initMarker = new DataView(record.buffer, record.byteOffset + cursor, 4).getInt32(0, true);
+  cursor += 4;
+  if (initMarker !== 0) {
+    if (cursor + 4 > record.length) throw new Error('CBL 开局注释长度字段不完整');
+    const initLength = new DataView(record.buffer, record.byteOffset + cursor, 4).getInt32(0, true);
+    cursor += 4;
+    if (initLength < 0 || initLength > record.length - cursor) throw new Error('CBL 开局注释长度超出记录范围');
+    cursor += initLength;
+  }
   for (let count = 0; count < 2000 && cursor + 4 <= record.length; count += 1) {
     const mark = record[cursor];
     const from = record[cursor + 2];
@@ -71,7 +81,7 @@ export function parseCbl(buffer, sourceName = 'import.cbl') {
     const board = Array(90).fill(null);
     for (let index = 0; index < 90; index += 1) board[Math.floor(index / 9) * 9 + index % 9] = PIECES[record[2120 + index]] ?? null;
     if (!board.includes('K') || !board.includes('k')) continue;
-    const moves = recordMoves(record, 2218);
+    const moves = recordMoves(record, 2214);
     records.push({ title, players: { red, black }, result: ({ 1: '红胜', 2: '黑胜', 3: '和棋' })[record[2076]] ?? '未完', board, side, moves, initialPosition: { fen: `${boardFen(board)} ${side}` } });
   }
   if (!records.length) throw new Error(`CBL 棋谱库“${libName || sourceName}”中没有可导入的有效记录`);

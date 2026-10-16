@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { convertTextToRecord, extractText, importXqfFolderFiles, MAX_IMPORT_SIZE } from '../src/importer.js';
+import { convertTextToRecord, extractText, findExistingImportedRecord, importXqfFolderFiles, MAX_IMPORT_SIZE } from '../src/importer.js';
 import { cblMovesAsText, parseCbl } from '../src/cbl.js';
 import { parseXqf, xqfMovesAsText } from '../src/xqf.js';
 import { initialBoard, validateAndReplay } from '../src/rules.js';
@@ -91,7 +91,7 @@ test('extractText recognizes XQF binary files without text decoding', async () =
   assert.match(text, /\bc6c5\b/);
 });
 
-test('imports nested folder XQF files in batches, skipping invalid files and repeated paths', async () => {
+test('imports nested folder XQF files in batches and overwrites matching source records', async () => {
   const createFile = (name, relativePath, valid = true) => {
     const bytes = new Uint8Array(valid ? 1048 : 32);
     if (valid) {
@@ -115,8 +115,49 @@ test('imports nested folder XQF files in batches, skipping invalid files and rep
   assert.equal(result.records[1].source.name, 'collection/subfolder/nested.xqf');
   assert.equal(progress.length, 3);
   const repeated = await importXqfFolderFiles(files.slice(0, 2), result.records);
-  assert.equal(repeated.records.length, 0);
-  assert.equal(repeated.duplicates, 2);
+  assert.equal(repeated.records.length, 2);
+  assert.equal(repeated.overwritten, 2);
+  assert.deepEqual(repeated.records.map(({ id }) => id), result.records.map(({ id }) => id));
+});
+
+test('matches the same imported file when selected singly or from a different folder root', () => {
+  const existing = { id: 'same-file', title: 'game', userImported: true, source: { name: 'old-folder/nested/game.xqf' } };
+  assert.equal(findExistingImportedRecord([existing], 'game.xqf', 'game'), existing);
+  assert.equal(findExistingImportedRecord([existing], 'other/game.xqf', 'different game'), undefined);
+});
+
+test('imports the real XQF and CBL samples from the project root', async () => {
+  const readSample = async (name) => {
+    const bytes = await readFile(new URL(`../${name}`, import.meta.url));
+    return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+  };
+  const xqf = parseXqf(await readSample('饶先顺手取胜局.XQF'), '饶先顺手取胜局.XQF');
+  const xqfRecord = convertTextToRecord(xqfMovesAsText(xqf), { title: xqf.title, sourceName: '饶先顺手取胜局.XQF' });
+  assert.equal(validateAndReplay({ ...xqfRecord, players: xqf.players, result: xqf.result, userImported: true }).moves.length, 18);
+
+  const cbl = parseCbl(await readSample('韬略元机残局谱.CBL'), '韬略元机残局谱.CBL');
+  let valid = 0;
+  for (const game of cbl.records) {
+    try {
+      const record = convertTextToRecord(cblMovesAsText(game), { title: game.title, sourceName: '韬略元机残局谱.CBL' });
+      validateAndReplay({ ...record, players: game.players, result: game.result, initialPosition: game.initialPosition, userImported: true });
+      valid += 1;
+    } catch {}
+  }
+  assert.equal(cbl.records.length, 182);
+  assert.equal(valid, 177);
+  const [xqfBytes, cblBytes] = await Promise.all([readSample('饶先顺手取胜局.XQF'), readSample('韬略元机残局谱.CBL')]);
+  const files = [
+    { name: '饶先顺手取胜局.XQF', webkitRelativePath: 'samples/饶先顺手取胜局.XQF', size: xqfBytes.byteLength, arrayBuffer: async () => xqfBytes },
+    { name: '韬略元机残局谱.CBL', webkitRelativePath: 'samples/韬略元机残局谱.CBL', size: cblBytes.byteLength, arrayBuffer: async () => cblBytes },
+  ];
+  const batch = await importXqfFolderFiles(files);
+  assert.equal(batch.records.length, 178);
+  assert.equal(batch.failures.length, 5);
+  const repeated = await importXqfFolderFiles(files, batch.records);
+  assert.equal(repeated.records.length, batch.records.length);
+  assert.equal(repeated.overwritten, batch.records.length);
+  assert.deepEqual(repeated.records.map(({ id }) => id), batch.records.map(({ id }) => id));
 });
 
 test('parses a CBL library game and converts its mainline into a legal record', () => {
@@ -140,8 +181,10 @@ test('parses a CBL library game and converts its mainline into a legal record', 
   const board = initialBoard();
   for (let index = 0; index < board.length; index += 1) initial[index] = code[board[index]] ?? 0;
   bytes.set(initial, recordOffset + 2120);
-  view.setInt32(recordOffset + 2214, 0, true);
-  bytes.set([1, 0, 56, 47], recordOffset + 2218);
+  view.setInt32(recordOffset + 2214, 1, true);
+  view.setInt32(recordOffset + 2218, 2, true);
+  bytes.set([65, 0], recordOffset + 2222);
+  bytes.set([1, 0, 56, 47], recordOffset + 2224);
   const library = parseCbl(buffer, 'test.cbl');
   assert.equal(library.title, '测试棋库');
   assert.equal(library.records.length, 1);

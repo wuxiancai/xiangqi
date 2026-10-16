@@ -4,7 +4,7 @@ import { loadSettings, recordRepository, saveSettings } from './storage.js';
 import { chineseNotation } from './notation.js';
 import { adjudicateRepetition } from './repetition.js';
 import { playMoveSound } from './audio.js';
-import { convertTextToRecord, extractText, importXqfFolderFiles, MAX_IMPORT_SIZE } from './importer.js';
+import { convertTextToRecord, extractText, findExistingImportedRecord, importXqfFolderFiles, MAX_IMPORT_SIZE } from './importer.js';
 import { parseXqf, xqfMovesAsText } from './xqf.js';
 import { cblMovesAsText, parseCbl } from './cbl.js';
 
@@ -173,11 +173,25 @@ function renderLibrary() {
   const records = filteredRecords();
   $('#empty-library').hidden = state.records.length > 0;
   for (const record of records) {
-    const button = document.createElement('button'); button.className = `game-card${state.currentRecord?.id === record.id ? ' active' : ''}`;
+    const card = document.createElement('div'); card.className = `game-card${state.currentRecord?.id === record.id ? ' active' : ''}`;
+    const select = document.createElement('button'); select.className = 'game-select';
     const title = document.createElement('strong'); title.textContent = record.title;
     const detail = document.createElement('span'); detail.textContent = `${record.category.join(' · ')}　${record.players?.red ?? '红方'} / ${record.players?.black ?? '黑方'}`;
-    button.append(title, detail); button.onclick = () => loadRecord(record);
-    list.append(button);
+    select.append(title, detail); select.onclick = () => loadRecord(record); card.append(select);
+    if (record.userImported) {
+      const remove = document.createElement('button'); remove.className = 'delete-record'; remove.type = 'button'; remove.textContent = '删除';
+      remove.setAttribute('aria-label', `删除棋谱：${record.title}`);
+      remove.onclick = async () => {
+        if (!window.confirm(`确定删除棋谱“${record.title}”吗？`)) return;
+        try {
+          await recordRepository.delete(record.id);
+          if (state.currentRecord?.id === record.id) { stopPlayback(); state.currentRecord = null; state.studyPly = 0; renderStudyBoard(); }
+          await refreshRecords(); toast(`已删除棋谱：${record.title}`);
+        } catch (error) { toast(`删除失败：${error.message}`); }
+      };
+      card.append(remove);
+    }
+    list.append(card);
   }
   if (!records.length && state.records.length) { const empty = document.createElement('div'); empty.className = 'move-empty'; empty.textContent = '没有匹配的棋谱'; list.append(empty); }
 }
@@ -226,7 +240,7 @@ async function refreshRecords() {
       return stored;
     });
     state.records = [...state.builtinRecords, ...importedRecords.filter((record) => !state.builtinRecords.some((builtin) => builtin.id === record.id))];
-    $('#storage-status').textContent = '棋谱保存在此浏览器';
+    $('#storage-status').textContent = await recordRepository.projectStorageAvailable() ? '棋谱保存在项目 data/imported 文件夹及此浏览器' : '棋谱保存在此浏览器';
   } catch (error) {
     state.records = [];
     $('#storage-status').textContent = '本地存储不可用';
@@ -244,9 +258,10 @@ async function importJsonFile(file) {
     const records = backup ? data.records : Array.isArray(data) ? data : [data];
     if (!Array.isArray(records)) throw new Error('备份文件缺少棋谱数组');
     const ids = new Set(state.records.map((record) => record.id));
+    let overwritten = 0;
     const validated = records.map((record) => {
       const normalized = validateAndReplay(record);
-      if (ids.has(normalized.id)) throw new Error(`棋谱 ID 已存在：${normalized.id}`);
+      if (ids.has(normalized.id)) overwritten += 1;
       ids.add(normalized.id);
       return { ...record, userImported: true };
     });
@@ -256,7 +271,7 @@ async function importJsonFile(file) {
     await refreshRecords();
     $('#import-file').value = '';
     if (validated.length === 1) loadRecord(validated[0]);
-    toast(`成功导入 ${validated.length} 盘棋谱`);
+    toast(`成功导入 ${validated.length} 盘棋谱，覆盖 ${overwritten} 盘`);
   } catch (error) { toast(`导入失败：${error.message}`); }
 }
 
@@ -282,7 +297,7 @@ async function importXqfFolder(files) {
       await refreshRecords();
     }
     const ignoredCount = selectedFiles.length - xqfCount;
-    const summary = `批量导入完成：成功 ${result.records.length} 盘，失败 ${result.failures.length} 个文件，重复跳过 ${result.duplicates} 个文件${ignoredCount ? `，非 XQF/CBL 文件跳过 ${ignoredCount} 个` : ''}。`;
+    const summary = `批量导入完成：保存 ${result.records.length} 盘，其中覆盖 ${result.overwritten} 盘，失败 ${result.failures.length} 项${ignoredCount ? `，非 XQF/CBL 文件跳过 ${ignoredCount} 个` : ''}。`;
     const failureDetails = result.failures.slice(0, 3).map(({ sourceName, message }) => `${sourceName}：${message}`).join('；');
     status.textContent = failureDetails ? `${summary}失败示例：${failureDetails}${result.failures.length > 3 ? '；更多失败请检查文件后重试' : ''}` : summary;
     toast(summary);
@@ -305,16 +320,21 @@ async function importFile(file) {
     try {
       $('#import-status').textContent = '正在解析 CBL 多盘棋谱库…';
       const library = parseCbl(await file.arrayBuffer(), file.name);
-      const ids = new Set(state.records.map((record) => record.id));
-      const records = library.records.map((game) => {
-        const record = convertTextToRecord(cblMovesAsText(game), { title: game.title, sourceName: file.name });
-        if (ids.has(record.id)) throw new Error(`棋谱 ID 已存在：${record.id}`);
-        ids.add(record.id);
-        return { ...record, players: game.players, result: game.result, initialPosition: game.initialPosition, userImported: true };
-      });
+      let overwritten = 0;
+      const records = [];
+      const failures = [];
+      for (const game of library.records) {
+        try {
+          const record = convertTextToRecord(cblMovesAsText(game), { title: game.title, sourceName: file.name });
+          const existing = findExistingImportedRecord(state.records, file.name, game.title);
+          if (existing) overwritten += 1;
+          records.push({ ...record, id: existing?.id ?? record.id, players: game.players, result: game.result, initialPosition: game.initialPosition, userImported: true });
+        } catch (error) { failures.push(`${game.title}：${error.message}`); }
+      }
+      if (!records.length) throw new Error(failures.slice(0, 2).join('；') || '棋库中没有可校验棋谱');
       await recordRepository.putMany(records);
       await refreshRecords();
-      toast(`CBL 棋谱库导入完成：成功 ${records.length} 盘`);
+      toast(`CBL 棋谱库导入完成：保存 ${records.length} 盘，覆盖 ${overwritten} 盘，失败 ${failures.length} 盘`);
     } catch (error) { toast(`CBL 导入失败：${error.message}`); }
     finally { $('#import-file').value = ''; }
     return;
@@ -351,15 +371,16 @@ async function convertAndImport() {
   try {
     $('#import-status').textContent = '正在逐着校验并转换棋谱…';
     await new Promise((resolve) => requestAnimationFrame(resolve));
-    const record = convertTextToRecord($('#import-text').value, { title: $('#import-title').value, sourceName: pendingImportSource });
-    const normalized = { ...record, ...(pendingXqfMetadata ? { players: pendingXqfMetadata.players, result: pendingXqfMetadata.result } : {}), userImported: true };
-    if (state.records.some((item) => item.id === normalized.id)) throw new Error('棋谱 ID 已存在');
+    const title = $('#import-title').value;
+    const record = convertTextToRecord($('#import-text').value, { title, sourceName: pendingImportSource });
+    const existing = findExistingImportedRecord(state.records, pendingImportSource, title);
+    const normalized = { ...record, id: existing?.id ?? record.id, ...(pendingXqfMetadata ? { players: pendingXqfMetadata.players, result: pendingXqfMetadata.result } : {}), userImported: true };
     await recordRepository.put(normalized);
     await refreshRecords();
     loadRecord(normalized);
     $('#import-dialog').close();
     pendingXqfMetadata = null;
-    toast(`已转换并导入棋谱，共 ${normalized.moves.length} 着`);
+    toast(`已${existing ? '覆盖' : '导入'}棋谱，共 ${normalized.moves.length} 着`);
   } catch (error) {
     $('#import-status').textContent = error.message;
     toast(`转换失败：${error.message}`);

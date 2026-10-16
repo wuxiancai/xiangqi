@@ -1,0 +1,4 @@
+.game-card{display:flex;align-items:center;gap:6px}
+.game-select{flex:1;min-width:0;text-align:left;border:0;background:transparent;padding:0}
+.game-select strong,.game-select span{display:block}
+.delete-record{border:1px solid #ead5cf;border-radius:7px;background:#fff9f6;color:#a84b3c;padding:5px 7px;font-size:10px}
