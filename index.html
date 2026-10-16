@@ -38,8 +38,7 @@
 
           <section class="study-board-column">
             <div class="board-header"><div><span class="live-dot"></span><span id="study-status">选择一盘棋谱开始</span></div><button id="study-flip" class="text-button">翻转棋盘</button></div>
-            <div class="board-frame"><svg id="study-board" class="chessboard" viewBox="0 0 500 550" role="grid" aria-label="中国象棋棋盘"></svg></div>
-            <div class="replay-panel panel">
+            <div class="replay-panel panel replay-panel-compact">
               <div class="replay-controls">
                 <button id="study-first" class="control-button" aria-label="跳到开局" title="跳到开局">|◀</button><button id="study-prev" class="control-button" aria-label="上一步" title="上一步">◀</button>
                 <button id="study-play" class="play-button" aria-label="自动播放" title="自动播放">▶</button>
@@ -49,6 +48,7 @@
               <div class="move-progress"><span id="move-counter">—</span><div class="progress-track"><span id="progress-fill"></span></div><span id="move-result">—</span></div>
               <div id="annotation" class="annotation"><span class="annotation-mark">注</span><span>选中棋谱后，这里会显示关键着法说明。</span></div>
             </div>
+            <div class="board-frame"><svg id="study-board" class="chessboard" viewBox="0 0 500 550" role="grid" aria-label="中国象棋棋盘"></svg></div>
           </section>
           <aside class="moves-panel panel"><div class="panel-title"><div><h2>着法记录</h2><span id="players-label" class="muted">红方 · 黑方</span></div></div><div id="move-list" class="move-list"><div class="move-empty">着法将显示在这里</div></div><div id="study-source" class="study-source"></div></aside>
         </div>
