@@ -14,7 +14,7 @@ const names = { red: '红方', black: '黑方' };
 const $ = (selector) => document.querySelector(selector);
 const state = {
   view: 'study', records: [], builtinRecords: [], currentRecord: null, studyPly: 0, studyFlipped: false, selectedCategory: '', query: '', timer: null,
-  board: initialBoard(), side: RED, history: [], playFlipped: false, gameOver: false, adjudication: null, settings: {}, aiBusy: false,
+  expandedRecordGroups: new Set(), board: initialBoard(), side: RED, history: [], playFlipped: false, gameOver: false, adjudication: null, settings: {}, aiBusy: false,
 };
 let moveAudio;
 
@@ -159,8 +159,49 @@ function renderMoveList() {
 }
 
 function filteredRecords() {
+  return state.records.filter((record) => !state.selectedCategory || record.category.includes(state.selectedCategory));
+}
+
+function recordGroup(record) {
+  if (!record.userImported || !record.source?.name) return null;
+  const sourceName = record.source.name.replaceAll('\\', '/');
+  const basename = sourceName.split('/').at(-1);
+  const extension = basename.match(/\.([^.]+)$/)?.[1]?.toLocaleLowerCase();
+  if (extension === 'cbl') return { key: `cbl:${sourceName.toLocaleLowerCase()}`, name: basename.replace(/\.[^.]+$/, '') };
+  if (extension === 'xqf' && sourceName.includes('/')) {
+    const folderName = sourceName.split('/').at(-2);
+    return { key: `xqf:${sourceName.slice(0, sourceName.lastIndexOf('/')).toLocaleLowerCase()}`, name: folderName };
+  }
+  return null;
+}
+
+function libraryEntries() {
   const query = state.query.trim().toLocaleLowerCase();
-  return state.records.filter((record) => (!state.selectedCategory || record.category.includes(state.selectedCategory)) && (!query || `${record.title} ${record.players?.red ?? ''} ${record.players?.black ?? ''} ${(record.tags ?? []).join(' ')}`.toLocaleLowerCase().includes(query)));
+  const filtered = filteredRecords();
+  const groups = new Map();
+  for (const record of filtered) {
+    const group = recordGroup(record);
+    if (!group) continue;
+    const entry = groups.get(group.key) ?? { ...group, records: [] };
+    entry.records.push(record);
+    groups.set(group.key, entry);
+  }
+  const recordMatches = (record) => !query || `${record.title} ${record.players?.red ?? ''} ${record.players?.black ?? ''} ${(record.tags ?? []).join(' ')}`.toLocaleLowerCase().includes(query);
+  const groupedIds = new Set();
+  const entries = [];
+  for (const group of groups.values()) {
+    const groupMatches = !query || group.name.toLocaleLowerCase().includes(query);
+    if (group.records.length < 2 || (!groupMatches && !group.records.some(recordMatches))) continue;
+    const records = groupMatches ? group.records : group.records.filter(recordMatches);
+    if (records.length < 2 && !groupMatches) continue;
+    records.forEach((record) => groupedIds.add(record.id));
+    entries.push({ type: 'folder', ...group, records, total: group.records.length });
+  }
+  for (const record of filtered) {
+    if (groupedIds.has(record.id) || !recordMatches(record)) continue;
+    entries.push({ type: 'record', record });
+  }
+  return entries;
 }
 
 function renderLibrary() {
@@ -172,9 +213,9 @@ function renderLibrary() {
     filters.append(button);
   }
   const list = $('#game-list'); list.replaceChildren();
-  const records = filteredRecords();
+  const entries = libraryEntries();
   $('#empty-library').hidden = state.records.length > 0;
-  for (const record of records) {
+  const renderRecord = (record, parent = list) => {
     const card = document.createElement('div'); card.className = `game-card${state.currentRecord?.id === record.id ? ' active' : ''}`;
     const select = document.createElement('button'); select.className = 'game-select';
     const title = document.createElement('strong'); title.textContent = record.title;
@@ -193,9 +234,30 @@ function renderLibrary() {
       };
       card.append(remove);
     }
-    list.append(card);
+    parent.append(card);
+  };
+  for (const entry of entries) {
+    if (entry.type === 'record') { renderRecord(entry.record); continue; }
+    const folder = document.createElement('section'); folder.className = 'game-folder';
+    const key = entry.key;
+    const expanded = state.expandedRecordGroups.has(key);
+    const toggle = document.createElement('button'); toggle.className = 'game-folder-toggle'; toggle.type = 'button';
+    toggle.setAttribute('aria-expanded', String(expanded));
+    toggle.setAttribute('aria-label', `${expanded ? '收起' : '展开'}棋谱集：${entry.name}，${entry.total} 局`);
+    const heading = document.createElement('strong'); heading.textContent = entry.name;
+    const count = document.createElement('span'); count.className = 'game-folder-count'; count.textContent = `${entry.total} 局`;
+    const chevron = document.createElement('span'); chevron.className = 'game-folder-chevron'; chevron.textContent = expanded ? '⌄' : '›';
+    toggle.append(heading, count, chevron);
+    toggle.onclick = () => { expanded ? state.expandedRecordGroups.delete(key) : state.expandedRecordGroups.add(key); renderLibrary(); };
+    folder.append(toggle);
+    if (expanded) {
+      const children = document.createElement('div'); children.className = 'game-folder-records';
+      for (const record of entry.records) renderRecord(record, children);
+      folder.append(children);
+    }
+    list.append(folder);
   }
-  if (!records.length && state.records.length) { const empty = document.createElement('div'); empty.className = 'move-empty'; empty.textContent = '没有匹配的棋谱'; list.append(empty); }
+  if (!entries.length && state.records.length) { const empty = document.createElement('div'); empty.className = 'move-empty'; empty.textContent = '没有匹配的棋谱'; list.append(empty); }
 }
 
 function loadRecord(raw) {
