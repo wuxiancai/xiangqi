@@ -36,7 +36,7 @@ function unlockMoveAudio() {
 function mapSquare(square, flipped) {
   return flipped ? { file: 8 - fileOf(square), rank: 9 - rankOf(square) } : { file: fileOf(square), rank: rankOf(square) };
 }
-function point(file, rank) { return { x: 50 + file * 50, y: 50 + rank * 50 }; }
+function point(file, rank) { return { x: 35 + file * 53.75, y: 40 + rank * (470 / 9) }; }
 function svgElement(name, attributes = {}) {
   const node = document.createElementNS('http://www.w3.org/2000/svg', name);
   for (const [key, value] of Object.entries(attributes)) node.setAttribute(key, value);
@@ -69,9 +69,9 @@ function renderBoard(svg, board, flipped, onSquare, selected = null, hints = [],
     lines.append(svgElement('line', { x1: a.x, y1: a.y, x2: b.x, y2: b.y, class: 'board-line' }));
   }
   svg.append(lines);
-  svg.append(svgElement('rect', { x: 51, y: 263, width: 398, height: 28, class: 'board-river-band' }));
-  const leftRiver = svgElement('text', { x: 112, y: 284, class: 'board-river', 'text-anchor': 'middle' }); leftRiver.textContent = '楚 河'; svg.append(leftRiver);
-  const rightRiver = svgElement('text', { x: 388, y: 284, class: 'board-river', 'text-anchor': 'middle' }); rightRiver.textContent = '漢 界'; svg.append(rightRiver);
+  svg.append(svgElement('rect', { x: 36, y: 263, width: 428, height: 28, class: 'board-river-band' }));
+  const leftRiver = svgElement('text', { x: 104, y: 284, class: 'board-river', 'text-anchor': 'middle' }); leftRiver.textContent = '楚 河'; svg.append(leftRiver);
+  const rightRiver = svgElement('text', { x: 396, y: 284, class: 'board-river', 'text-anchor': 'middle' }); rightRiver.textContent = '漢 界'; svg.append(rightRiver);
   svg.append(svgElement('rect', { x: 190, y: 267, width: 120, height: 20, rx: 10, class: 'board-brand-pill' }));
   const brandText = svgElement('text', { x: 250, y: 282, class: 'board-brand', 'text-anchor': 'middle' }); brandText.textContent = '楚河漢界'; svg.append(brandText);
   const redDigits = '一二三四五六七八九';
