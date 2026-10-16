@@ -100,7 +100,6 @@ function renderBoard(svg, board, flipped, onSquare, selected = null, hints = [],
   }
   for (let square = 0; square < 90; square += 1) {
     const { file, rank } = mapSquare(square, flipped); const { x, y } = point(file, rank);
-    if (lastMove && (square === lastMove.from || square === lastMove.to)) svg.append(svgElement('circle', { cx: x, cy: y, r: 21, class: 'last-move' }));
     if (hints.some((move) => move.to === square)) svg.append(svgElement('circle', { cx: x, cy: y, r: 7, class: 'legal-dot' }));
     const piece = board[square];
     if (piece) {
@@ -116,6 +115,11 @@ function renderBoard(svg, board, flipped, onSquare, selected = null, hints = [],
       svg.append(svgElement('path', { d: `M ${x - 9} ${y - 12} Q ${x - 4} ${y - 16} ${x + 3} ${y - 14}`, class: `piece-glint ${side}` }));
     }
     if (square === selected) svg.append(svgElement('circle', { cx: x, cy: y, r: 22, fill: 'none', stroke: '#40805d', 'stroke-width': 2.5, 'pointer-events': 'none' }));
+    if (lastMove?.from === square) {
+      svg.append(svgElement('circle', { cx: x, cy: y, r: 9, class: 'last-move-origin-ring' }));
+      svg.append(svgElement('circle', { cx: x, cy: y, r: 4, class: 'last-move-origin' }));
+    }
+    if (lastMove?.to === square) svg.append(svgElement('circle', { cx: x, cy: y, r: 22.5, class: 'last-move-destination' }));
     const hit = svgElement('rect', { x: x - 22, y: y - 22, width: 44, height: 44, class: 'board-hit', tabindex: '0', role: 'gridcell', 'aria-label': `${toICCS(square)}${piece ? ` ${labels[piece]}${threatened.has(square) ? '，可能被对方下一步吃掉' : ''}` : ''}` });
     hit.dataset.square = String(square); svg.append(hit);
   }

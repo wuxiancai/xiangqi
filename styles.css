@@ -47,3 +47,6 @@
 .board-legend{gap:7px}
 .threat-key.red{border-color:#e33e35;background:#ed443d38;box-shadow:0 0 5px #ee413d55}
 .threat-key.green{border-color:#258552;background:#4dba7b38;box-shadow:0 0 5px #2e9a6255}
+.last-move-origin-ring{fill:none;stroke:#fff;stroke-width:1.8;opacity:.85;filter:drop-shadow(0 0 4px #fff);pointer-events:none}
+.last-move-origin{fill:#fff;filter:drop-shadow(0 0 5px #fff);pointer-events:none}
+.last-move-destination{fill:none;stroke:#fff;stroke-width:2.4;opacity:.94;filter:drop-shadow(0 0 5px #fff);pointer-events:none}
