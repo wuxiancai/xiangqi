@@ -133,7 +133,7 @@ test('record import rejects invalid schema and reports the failing ply', () => {
 test('record replay accepts the app import marker but still rejects arbitrary fields', () => {
   const record = { schema: 'xiangqi-study/v1', id: 'imported', title: '导入棋谱', category: ['古谱'], players: { red: '红', black: '黑' }, result: '未完', source: { name: '测试', rights: '待核实' }, initialPosition: 'standard', moves: [], annotations: {}, tags: [], userImported: true };
   assert.equal(validateAndReplay(record).userImported, true);
-  assert.throws(() => validateAndReplay({ ...record, unexpected: true }), /包含未知字段/);
+  assert.throws(() => validateAndReplay({ ...record, unexpected: true }), /包含未知字段：unexpected/);
   assert.throws(() => validateAndReplay({ ...record, userImported: 'yes' }), /userImported 必须是布尔值/);
 });
 

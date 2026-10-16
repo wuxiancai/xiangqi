@@ -191,7 +191,8 @@ export const sameMove = (left, right) => left?.from === right?.from && left?.to 
 export function validateAndReplay(record) {
   if (!record || record.schema !== 'xiangqi-study/v1') throw new Error('棋谱 schema 必须为 xiangqi-study/v1');
   const allowedKeys = ['schema', 'id', 'title', 'category', 'players', 'result', 'source', 'initialPosition', 'moves', 'annotations', 'tags', 'userImported'];
-  if (Object.keys(record).some((key) => !allowedKeys.includes(key))) throw new Error('棋谱包含未知字段');
+  const unknownKeys = Object.keys(record).filter((key) => !allowedKeys.includes(key));
+  if (unknownKeys.length) throw new Error(`棋谱包含未知字段：${unknownKeys.join('、')}`);
   if (record.userImported !== undefined && typeof record.userImported !== 'boolean') throw new Error('userImported 必须是布尔值');
   if (typeof record.id !== 'string' || !record.id.trim()) throw new Error('棋谱缺少 id');
   if (typeof record.title !== 'string' || !record.title.trim()) throw new Error('棋谱缺少标题');
