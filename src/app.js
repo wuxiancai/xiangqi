@@ -142,17 +142,19 @@ function renderMoveList() {
   if (!state.currentRecord) { const empty = document.createElement('div'); empty.className = 'move-empty'; empty.textContent = '着法将显示在这里'; container.append(empty); return; }
   const { moves } = state.currentRecord;
   for (let index = 0; index < moves.length; index += 2) {
+    const row = document.createElement('div'); row.className = 'move-row';
     const number = document.createElement('span'); number.className = 'move-number'; number.textContent = `${Math.floor(index / 2) + 1}.`;
-    container.append(number);
+    row.append(number);
     for (const ply of [index + 1, index + 2]) {
-      if (ply > moves.length) { const spacer = document.createElement('span'); container.append(spacer); continue; }
+      if (ply > moves.length) continue;
       const move = moves[ply - 1]; const side = ply % 2 ? state.currentRecord.initialSide ?? RED : otherSide(state.currentRecord.initialSide ?? RED);
       const button = document.createElement('button'); button.className = `move-item ${side}${state.studyPly === ply ? ' active' : ''}`;
       button.textContent = chineseNotation(state.currentRecord.positions[ply - 1], move, side);
       button.setAttribute('aria-label', `第 ${ply} 着，${button.textContent}`);
       button.onclick = () => { stopPlayback(); state.studyPly = ply; renderStudyBoard(); };
-      container.append(button);
+      row.append(button);
     }
+    container.append(row);
   }
 }
 
