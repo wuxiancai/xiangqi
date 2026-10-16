@@ -51,6 +51,59 @@
 .last-move-origin-ring{fill:none;stroke:#fff;stroke-width:1.4;opacity:.85;filter:drop-shadow(0 0 1.2px #fff);pointer-events:none}
 .last-move-origin{fill:#fff;filter:drop-shadow(0 0 1.2px #fff);pointer-events:none}
 .last-move-destination{fill:none;stroke:#fff;stroke-width:1.8;opacity:.94;filter:drop-shadow(0 0 1.5px #fff);pointer-events:none}
+
+/* Readability and touch improvements for the study workflow. */
+:root{--muted:#68736b;--line:#ddd6c8;--green:#245c45;--green-dark:#1c4936}
+body{line-height:1.5}
+.panel{border-color:#e4ddcf;box-shadow:0 10px 28px rgba(56,48,32,.07)}
+.library-panel,.moves-panel,.setup-panel,.history-panel{padding:20px}
+.panel-title h2{font-size:17px}
+.muted{font-size:11px}
+.search-box{height:44px}
+.search-box input,.field-label select,.field-label input{font-size:13px}
+.filter-chip{min-height:36px;padding:7px 11px;font-size:11px}
+.game-list{gap:9px}
+.game-card{padding:12px;border-color:#e6dfd3;transition:border-color .16s,background .16s,transform .16s}
+.game-card:hover{border-color:#a9bca9;transform:translateY(-1px)}
+.game-card strong{font-size:13px;line-height:1.45}
+.game-card span{font-size:11px;line-height:1.5}
+.empty-state strong{font-size:13px}
+.empty-state p,.source-note{font-size:11px}
+.board-header{font-size:13px}
+.text-button,.quiet-button{min-height:40px}
+.replay-panel-compact{padding:10px 12px;gap:8px 14px}
+.replay-panel-compact .control-button{width:44px;height:44px;font-size:13px}
+.replay-panel-compact .play-button{width:48px;height:48px;font-size:13px}
+.replay-panel-compact .speed-control{font-size:11px}
+.replay-panel-compact .move-progress{font-size:10px}
+.replay-panel-compact .annotation{font-size:11px;line-height:1.55}
+.move-number{font-size:11px}
+.move-item{min-height:38px;font-size:12px}
+.move-empty{font-size:12px}
+.study-source{font-size:11px}
+.secondary-button{min-height:44px;font-size:12px}
+.ai-output,.disclaimer{font-size:11px;line-height:1.65}
+.history-ply{min-height:34px;font-size:11px}
+button,.import-button,.game-card{transition:background-color .16s,border-color .16s,color .16s,transform .16s}
+button:active,.import-button:active{transform:translateY(1px)}
+@media(max-width:720px){
+  .library-panel,.moves-panel,.setup-panel,.history-panel{padding:16px}
+  .replay-panel-compact{grid-template-columns:1fr;gap:8px;padding:10px}
+  .replay-panel-compact .replay-controls{grid-column:1;grid-row:auto;justify-content:space-between;gap:6px}
+  .replay-panel-compact .control-button{width:44px;height:44px;font-size:12px}
+  .replay-panel-compact .play-button{width:48px;height:48px}
+  .replay-panel-compact .speed-control{grid-column:1;grid-row:auto;margin:0;font-size:11px}
+  .replay-panel-compact .move-progress,.replay-panel-compact .annotation{grid-column:1}
+  .board-header{height:40px}
+  .game-list{gap:8px}
+}
+@media(max-width:390px){
+  .replay-panel-compact{grid-template-columns:1fr}
+  .replay-panel-compact .control-button{width:44px;height:44px}
+  .replay-panel-compact .play-button{width:48px;height:48px}
+  .study-header-copy h1{font-size:18px}
+  .game-list{grid-template-columns:1fr}
+}
 .import-dialog textarea{width:100%;resize:vertical;min-height:180px;border:1px solid var(--line);border-radius:8px;background:#fffefa;padding:10px;color:#48534b;font:12px/1.7 ui-monospace,SFMono-Regular,monospace}.import-dialog .settings-warning{overflow-wrap:anywhere}.import-privacy{font-size:10px;line-height:1.7;color:#8a9189}.import-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;max-width:min(100%,620px)}.secondary-import{background:transparent;color:var(--green)}.secondary-import:hover{background:var(--green-pale)}.folder-import-status{flex-basis:100%;margin:0;text-align:right;color:var(--muted);font-size:11px;line-height:1.6;overflow-wrap:anywhere}.folder-import-status[hidden]{display:none}
 .play-layout{grid-template-columns:minmax(0,1fr) minmax(300px,340px)}.setup-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.setup-panel .field-label{margin-top:14px}.setup-panel .field-label select{padding:0 5px;font-size:10px}.history-ply.red,.history-ply.red strong,.history-ply.red span{color:#b6402f}.history-ply.black,.history-ply.black strong,.history-ply.black span{color:#343832}.move-list{grid-template-columns:minmax(0,1fr);gap:3px}.move-row{display:grid;grid-template-columns:24px minmax(0,1fr) minmax(0,1fr);align-items:center;gap:4px}.move-number{padding:5px 2px}.move-item{width:100%;min-width:0;min-height:30px;padding:6px 7px;white-space:nowrap}.move-item.red{color:#b6402f}.move-item.black{color:#343832}.move-item.active{color:var(--green)}.topbar{gap:14px}.brand{min-width:200px}.main-nav{flex:0 0 auto;gap:18px}.study-header-actions{display:flex;align-items:center;justify-content:flex-end;gap:12px;flex:1;min-width:0}.study-header-actions[hidden]{display:none}.study-header-copy{min-width:260px}.study-header-copy .eyebrow{margin:0 0 2px;font-size:8px}.study-header-copy h1{margin:0;font-family:'Noto Serif SC',serif;font-size:20px;line-height:1.25;white-space:nowrap}.study-header-copy .subtitle{margin:3px 0 0;font-size:10px;white-space:nowrap}.study-header-actions .import-actions{flex:0 1 360px;width:360px;min-width:0;max-width:100%;gap:6px}.study-header-actions .folder-import-status{flex:1 1 100%;width:100%;min-width:0;max-width:100%;overflow-wrap:anywhere}.study-header-actions .import-button{min-height:40px;padding:0 14px;border:1px solid var(--line);border-radius:9px;background:transparent;color:#63736a;font-size:13px;font-weight:400}.study-header-actions .import-button:hover{border-color:#a5beaa;color:var(--green);background:transparent}.view{padding-top:20px}
 @media(max-width:720px){.page-heading{flex-wrap:wrap}.import-actions{width:100%;justify-content:flex-start}.folder-import-status{text-align:left}.topbar{height:auto;min-height:67px;flex-wrap:wrap;padding:8px 0}.topbar #settings-button{order:1}.study-header-actions{order:2;flex:1 0 100%;flex-wrap:wrap;justify-content:flex-start;gap:7px 12px}.study-header-copy{flex:1 1 100%;min-width:0}.study-header-copy h1{font-size:19px;white-space:normal}.study-header-copy .subtitle{white-space:normal}.study-header-actions .import-actions{flex:1 1 100%;width:100%}.view{padding-top:16px}}
