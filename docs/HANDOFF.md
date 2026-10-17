@@ -180,3 +180,9 @@
 - 初始化数据后自动启动 Pikafish；自动加载失败时状态区显示原因并允许重试，不弹出阻断对局的错误提示。搜索深度默认改为最高的 20 层；Service Worker 壳缓存升至 v49，适配器模块 URL 更新为 `arrow-overlay-1`。
 - 隔离端口 8007 的浏览器加载本机真实 Pikafish WASM，确认自动就绪、红方分析达到深度 20、默认下拉值为 20；点击箭头附近的棋子仍选中，再点击目标格完成“兵三进一”，棋盘/棋谱更新并自动开始黑方分析。截图确认细箭头未遮住棋子字样。`node --check`（app.js、engine.js、service-worker.js）和 `git diff --check` 通过；未运行测试套件。
 - 保留工作区已有的 README.md、index.html 修改及非跟踪数据；本轮仅提交应用、样式、Service Worker 和交接文档相关文件。
+
+# 2026-10-17 分析箭头端点对齐棋盘坐标
+
+- 按截图将分析箭头起点设为源棋子的交叉点中心，箭头尖端对齐目标交叉点；SVG marker 的尖端锚点同步改为箭头末端。箭头仍保持 `pointer-events: none`，行棋交互不变。
+- Service Worker 缓存版本更新至 v50。在隔离浏览器载入本机 Pikafish WASM 后目视确认：炮的分析箭头从炮心连到目标交叉点中心；当前行棋局面与箭头同步。
+- `node --check src/app.js`、`git diff --check` 通过；未运行测试套件。
