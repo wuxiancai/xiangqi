@@ -38,7 +38,7 @@ test('red analysis arrow has strong contrast on the wooden board', async () => {
 test('piece status rings rotate without intercepting input and respect reduced motion', async () => {
   const css = await read('../styles.css');
   const app = await read('../src/app.js');
-  assert.match(css, /\.threat-ring,\.selected-piece-ring,\.last-move-origin-ring,\.last-move-origin,\.last-move-destination\{[^}]*animation:chess-ring-spin/);
+  assert.match(css, /\.threat-ring,\.selected-piece-ring,\.last-move-origin-ring,\.last-move-origin,\.last-move-destination\{[^}]*animation:chess-ring-spin 8\.4s linear infinite/);
   assert.match(css, /@keyframes chess-ring-spin\{to\{transform:rotate\(360deg\)\}\}/);
   assert.match(css, /@media\(prefers-reduced-motion:reduce\)[^{]*\{[^}]*animation:none/);
   assert.match(app, /class: 'selected-piece-ring'/);
