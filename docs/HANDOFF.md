@@ -245,3 +245,9 @@
 # 2026-10-17 红色棋子提示圈改为静止
 
 - 红色“受保护”提示圈不再旋转；白色最近着法圈、绿色危险提示圈和选中圈保持当前转速。Service Worker 缓存升至 v58，UI 回归测试断言红圈动画关闭。
+# 2026-10-17 Pikafish 默认棋力与 UCI 参数
+
+- 对照 Pikafish 官方 UCI 文档及官方 WebAssembly 构建参考，核实项目固定官方源码修订 `6a59ee2f7b105bff64d9efc2692591107787e2b1`（2026-09-19）、Emscripten 3.1.74 和 NNUE SHA-256；当前本地产物的网络哈希与构建脚本匹配，浏览器 Worker 将其写入 `/pikafish.nnue` 后再初始化。
+- 修正影响棋力的默认参数：官方说明 MultiPV 设为 1 性能最佳；AI 应手及常规分析默认单主线，默认深度提高到 30；设置 Threads 为硬件并发数（1–8），Hash 设为 256 MiB。官方引擎默认没有启用强度限制。
+- 更新引擎模块 URL 与 Service Worker shell 缓存版本，避免旧浏览器缓存继续使用原默认值。未运行测试或重新构建；已安装 Docker 且构建产物、固定源码提交与 NNUE 哈希存在，但本轮未通过浏览器重新实测对局速度/棋力。强度仍未经过对局基准认证。
+- Pikafish 官方说明：UCI 是推荐 GUI 接口；Threads 应按可用核心配置，MultiPV=1 有最佳性能，EvalFile 必须对应有效 NNUE。资料：[官方 Pikafish README](https://github.com/official-pikafish/Pikafish)、[官方 UCI 文档](https://github.com/official-pikafish/Pikafish/wiki/UCI-%26-Commands)、[Pikafish WebAssembly 构建参考](https://github.com/brianhliou/pikafish-wasm)。

@@ -7,7 +7,7 @@ import { playCheckSound, playMoveSound } from './audio.js?v=check-voice-1';
 import { convertTextToRecord, extractText, findExistingImportedRecord, importXqfFolderFiles, MAX_IMPORT_SIZE } from './importer.js';
 import { parseXqf, xqfMovesAsText } from './xqf.js';
 import { cblMovesAsText, parseCbl } from './cbl.js';
-import { engineMoveToICCS, formatRedEvaluation, PikafishEngine } from '../engine/pikafish/engine.js?v=wdl-score-1';
+import { engineMoveToICCS, formatRedEvaluation, PikafishEngine } from '../engine/pikafish/engine.js?v=full-strength-default-1';
 
 const categories = ['古谱', '现代对局', '开局', '残局'];
 const labels = { K: '帥', A: '仕', E: '相', R: '車', H: '馬', C: '炮', P: '兵', k: '將', a: '士', e: '象', r: '車', h: '馬', c: '炮', p: '卒' };
@@ -620,7 +620,7 @@ function installEnginePanel() {
   const panel = document.createElement('section');
   panel.id = 'pikafish-panel';
   panel.className = 'panel engine-panel';
-  panel.innerHTML = `<div class="panel-title"><div><h2>Pikafish 引擎</h2><span id="pikafish-status" class="muted" role="status">正在准备本地引擎…</span></div><span class="engine-badge">WASM</span></div><div class="engine-toolbar"><button id="pikafish-start" class="secondary-button">正在加载…</button><button id="pikafish-analyze" class="primary-button" disabled>分析局面</button><label class="engine-depth"><span>深度</span><select id="pikafish-depth" aria-label="搜索深度"><option value="12">快速 · 12 层</option><option value="16">标准 · 16 层</option><option value="20" selected>深入 · 20 层</option></select></label></div><div id="pikafish-lines" class="engine-lines"></div><p class="engine-footnote">引擎就绪后会在每步落子后自动分析红黑双方各自回合的局面；首次加载需下载 NNUE 网络。</p>`;
+  panel.innerHTML = `<div class="panel-title"><div><h2>Pikafish 引擎</h2><span id="pikafish-status" class="muted" role="status">正在准备本地引擎…</span></div><span class="engine-badge">WASM</span></div><div class="engine-toolbar"><button id="pikafish-start" class="secondary-button">正在加载…</button><button id="pikafish-analyze" class="primary-button" disabled>分析局面</button><label class="engine-depth"><span>深度</span><select id="pikafish-depth" aria-label="搜索深度"><option value="12">快速 · 12 层</option><option value="20">标准 · 20 层</option><option value="30" selected>最强 · 30 层</option></select></label></div><div id="pikafish-lines" class="engine-lines"></div><p class="engine-footnote">默认使用 Pikafish 单主线搜索、可用 CPU 线程（最多 8）和 256 MiB 哈希表；最强档搜索至 30 层。首次加载需下载 NNUE 网络。</p>`;
   $('.game-sidebar').prepend(panel);
   renderEngineLines();
 }
@@ -668,7 +668,7 @@ function renderEngineLines() {
   }
 }
 
-async function requestPikafishAnalysis({ multiPv = 3 } = {}) {
+async function requestPikafishAnalysis({ multiPv = 1 } = {}) {
   if (!state.pikafish?.ready || state.gameOver) return null;
   const board = [...state.board]; const side = state.side; const position = positionKey(board, side);
   const previousTarget = state.engineAnalysisTarget;

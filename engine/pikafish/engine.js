@@ -96,6 +96,9 @@ export class PikafishEngine {
         } else if (data.type === 'line') {
           this.#line(data.line);
           if (data.line === 'uciok' && !this.ready) {
+            const threads = Math.max(1, Math.min(8, Number(navigator.hardwareConcurrency) || 1));
+            worker.postMessage({ type: 'command', command: `setoption name Threads value ${threads}` });
+            worker.postMessage({ type: 'command', command: 'setoption name Hash value 256' });
             worker.postMessage({ type: 'command', command: 'setoption name UCI_ShowWDL value true' });
             worker.postMessage({ type: 'command', command: 'isready' });
           } else if (data.line === 'readyok' && !this.ready) {
@@ -140,7 +143,7 @@ export class PikafishEngine {
   }
 
   // Supersede an in-flight position with the newest request after UCI stops.
-  analyze(board, side, { depth = 14, multiPv = 3 } = {}) {
+  analyze(board, side, { depth = 30, multiPv = 1 } = {}) {
     if (!this.ready) return Promise.reject(new Error('Pikafish 尚未就绪'));
     const request = { id: ++this.analysisId, board: [...board], side, depth, multiPv, lines: new Map() };
     const promise = new Promise((resolve, reject) => { request.resolve = resolve; request.reject = reject; });

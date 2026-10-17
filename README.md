@@ -1,6 +1,6 @@
 # 楚河：中国象棋学习与对弈
 
-纯静态 HTML/CSS/JavaScript 单页应用。棋盘以 SVG 绘制，规则、棋谱校验和基础 AI 搜索在浏览器本地运行。用户可导入多种棋谱文件并转换为应用内部 JSON；格式定义见 [JSON Schema](docs/xiangqi-study-v1.schema.json)，导入样例见 [格式示例](examples/xiangqi-study-v1.example.json)。样例是原创格式演示，不是古谱或历史对局。
+纯静态 HTML/CSS/JavaScript 单页应用。棋盘以 SVG 绘制，规则、棋谱校验和基础 AI 搜索在浏览器本地运行。用户可导入 `xiangqi-study/v1` UTF-8 JSON 棋谱，文件上限 2 MiB；格式定义见 [JSON Schema](docs/xiangqi-study-v1.schema.json)，导入样例见 [格式示例](examples/xiangqi-study-v1.example.json)。样例是原创格式演示，不是古谱或历史对局。
 
 ## 本地运行
 
@@ -23,15 +23,9 @@ npm test
 ## 功能现状
 
 - 已实现标准初始局面、主要象棋走法、合法性、自将约束、将军/将死/困毙判断。
-- 已实现棋谱检索、分类、多格式棋谱导入、逐着回放、自动播放和本地持久化。
-- 已实现本地双人、本地搜索 AI（默认最强；迭代加深、置换表、主变/历史着法排序、吃子延伸及位置评分）、兼容 Chat Completions API 的建议接口、着法合法性检查及本地降级；AI 棋力尚未经对局基准认证。
-- 对方可合法吃子的棋子按己方回吃保护状态提示：有保护为红圈，无保护为绿圈；普通落子播放清脆音调，吃子播放低音加双重木击声，红黑双方一致。
+- 已实现棋谱检索、分类、JSON 导入、逐着回放、自动播放和本地持久化。
+- 已实现本地双人、基础搜索 AI、兼容 Chat Completions API 的建议接口、着法合法性检查及本地降级。
 - 内置库当前收录 36 盘现代大师对局和 40 盘残局，共 76 盘，着法均通过规则校验。现代/残局数据源为 [Chinese Chess Practical Dataset（CC BY 4.0）](https://github.com/Yvonne761/Chinese-Chess-Practical-Dataset)，来源、版本和归属见 `data/ATTRIBUTION.md`。古谱《梅花谱》《橘中秘》《适情雅趣》尚未录入；100 盘首版目标未达成，不应将当前版本视为完整内容交付。
-- 多格式导入详见下方说明；旧版二进制 DOC、加密文档和棋盘截图局面识别暂不支持。
+- 首版导入仅支持 `xiangqi-study/v1` JSON（最大 2 MiB）；XQF、PGN、ICCS 文本解析仍延后。
 - 内置 AI 棋力未经认证；API 模型强度无法与引擎等级等同。API 密钥存于当前浏览器 IndexedDB，浏览器直连服务商存在密钥暴露与 CORS 限制。
-- 静态托管无需后端；自托管启动脚本运行轻量文件服务，以便将导入棋谱保存到项目目录。Linux 部署由 systemd 管理，具体见“部署与运行”。
-## 导入棋谱
-
-棋谱库支持导入 `xiangqi-study/v1` JSON，以及 XQF、CCBridge CBL、TXT、Markdown、PGN/ICCS/FEN 文本、DOCX、PDF 和常见图片（PNG/JPEG/WebP/BMP/TIFF）。CBL 单文件包含多盘时会批量导入其中可识别的主线；XQF 与 CBL 也可通过“导入文件夹”批量导入所选目录及其子目录中的谱文件。棋谱会在本机解码并逐着校验；无效 CBL 单局会单独跳过并报告，重复来源会覆盖已有记录。导入记录可在棋谱卡片上删除。通过 `scripts/run_server.py` 或部署脚本启动时，导入后的 JSON 棋谱保存于项目 `data/imported/` 文件夹，重新部署保留该目录即可；直接使用静态托管时仍只保存在浏览器 IndexedDB。项目服务端面向可信网络使用，不提供账号认证；请勿直接暴露在公网。CBL 变着暂不导入；其他非 JSON 格式先提取/识别文本，显示可编辑预览后逐着校验。单文件上限 500 MiB。
-
-PDF、DOCX 与图片解析组件在首次使用时从 jsDelivr 加载；中文 OCR 使用 Tesseract.js 与简体中文识别模型。文件内容在当前浏览器本地处理，不会上传。扫描 PDF 会逐页 OCR。旧版二进制 DOC、加密文档以及未列出的专有格式需先转为支持的格式；棋谱图片须清晰展示可识别的中文记谱，棋盘局面截图暂不自动识别为着法。
+- 自托管静态文件可由 HTTPS 静态站点托管；首版无后端进程，因此无需 systemd 服务。

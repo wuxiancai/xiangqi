@@ -82,4 +82,4 @@
 
 ## Pikafish 浏览器引擎补充
 
-对弈工作台可选加载 Pikafish WebAssembly 引擎，用于 MultiPV 候选分析和 AI 应手；本地规则仍负责校验并执行实际走法。引擎及 NNUE 网络不随仓库分发，用户可按 `engine/pikafish/README.md` 在本机构建。Pikafish 源码为 GPL-3.0-or-later，NNUE 权重另有非商业限制；强度等级须经独立基准后才可标定。多线程 WASM 需要 COOP/COEP 隔离响应头。
+对弈工作台默认自动加载 Pikafish WebAssembly 引擎用于 AI 应手；本地规则仍负责校验并执行实际走法。最强档默认搜索 30 层、MultiPV 1、按设备 CPU 数配置最多 8 个线程并使用 256 MiB Hash；多候选局面分析可提高 MultiPV，但会降低搜索速度。引擎及 NNUE 网络不随仓库分发，用户可按 `engine/pikafish/README.md` 在本机构建。Pikafish 源码为 GPL-3.0-or-later，NNUE 权重另有非商业限制；强度等级须经独立基准后才可标定。多线程 WASM 需要 COOP/COEP 隔离响应头。
