@@ -2,7 +2,7 @@ const pieceMap = { K: 'K', A: 'A', E: 'B', R: 'R', H: 'N', C: 'C', P: 'P' };
 
 export function boardToFen(board, side) {
   const rows = [];
-  for (let rank = 0; rank < 10; rank += 1) {
+  for (let rank = 9; rank >= 0; rank -= 1) {
     let row = '';
     let empty = 0;
     for (let file = 0; file < 9; file += 1) {
@@ -11,12 +11,17 @@ export function boardToFen(board, side) {
       if (empty) { row += empty; empty = 0; }
       const fenPiece = pieceMap[piece.toUpperCase()];
       if (!fenPiece) throw new Error(`无法转换棋子：${piece}`);
-      row += piece === piece.toUpperCase() ? fenPiece : fenPiece.toLowerCase();
+      row += piece === piece.toUpperCase() ? fenPiece.toLowerCase() : fenPiece;
     }
     if (empty) row += empty;
     rows.push(row);
   }
   return `${rows.join('/')} ${side === 'red' ? 'w' : 'b'} - - 0 1`;
+}
+
+export function engineMoveToICCS(move) {
+  if (typeof move !== 'string' || !/^[a-i][0-9][a-i][0-9]$/.test(move)) throw new Error(`无效的 Pikafish 着法：${move}`);
+  return `${move[0]}${9 - Number(move[1])}${move[2]}${9 - Number(move[3])}`;
 }
 
 const asset = (name) => new URL(`./dist/${name}`, import.meta.url).href;
@@ -33,7 +38,11 @@ export class PikafishEngine {
   start() {
     if (globalThis.crossOriginIsolated !== true) return Promise.reject(new Error('当前站点未启用 COOP/COEP，无法启动多线程引擎；请使用项目自托管服务或配置隔离响应头'));
     if (this.worker) return this.ready ? Promise.resolve() : Promise.reject(new Error('Pikafish 正在初始化'));
-    return new Promise((resolve, reject) => {
+    const requiredAssets = ['worker.js', 'pikafish.js', 'pikafish.wasm', 'pikafish.nnue'];
+    return Promise.all(requiredAssets.map(async (name) => {
+      const response = await fetch(asset(name), { method: 'HEAD', cache: 'no-store' });
+      if (!response.ok) throw new Error(`引擎资源 ${name} 不可用（HTTP ${response.status}）；请先运行 bash engine/pikafish/build.sh`);
+    })).then(() => new Promise((resolve, reject) => {
       const worker = new Worker(asset('worker.js'));
       this.worker = worker;
       const timer = setTimeout(() => reject(new Error('引擎初始化超时')), 120000);
@@ -59,7 +68,7 @@ export class PikafishEngine {
       };
       worker.onerror = (event) => { clearTimeout(timer); reject(new Error(event.message || 'Pikafish Worker 加载失败')); };
       worker.postMessage({ type: 'init', jsUrl: asset('pikafish.js'), wasmUrl: asset('pikafish.wasm'), netUrl: asset('pikafish.nnue') });
-    });
+    }));
   }
 
   #line(line) {

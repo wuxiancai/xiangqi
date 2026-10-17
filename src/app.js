@@ -7,7 +7,7 @@ import { playCheckSound, playMoveSound } from './audio.js';
 import { convertTextToRecord, extractText, findExistingImportedRecord, importXqfFolderFiles, MAX_IMPORT_SIZE } from './importer.js';
 import { parseXqf, xqfMovesAsText } from './xqf.js';
 import { cblMovesAsText, parseCbl } from './cbl.js';
-import { PikafishEngine } from '../engine/pikafish/engine.js';
+import { engineMoveToICCS, PikafishEngine } from '../engine/pikafish/engine.js';
 
 const categories = ['古谱', '现代对局', '开局', '残局'];
 const labels = { K: '帥', A: '仕', E: '相', R: '車', H: '馬', C: '炮', P: '兵', k: '將', a: '士', e: '象', r: '車', h: '馬', c: '炮', p: '卒' };
@@ -539,7 +539,7 @@ async function scheduleAiMove() {
   try {
     if (state.pikafish?.ready) {
       const uciMove = await state.pikafish.analyze(state.board, state.side, { depth: Number($('#pikafish-depth').value), multiPv: 1 });
-      if (/^[a-i][0-9][a-i][0-9]$/.test(uciMove)) move = { from: fromICCS(uciMove.slice(0, 2)), to: fromICCS(uciMove.slice(2, 4)) };
+      if (/^[a-i][0-9][a-i][0-9]$/.test(uciMove)) { const iccs = engineMoveToICCS(uciMove); move = { from: fromICCS(iccs.slice(0, 2)), to: fromICCS(iccs.slice(2, 4)) }; }
       $('#ai-output').textContent = 'Pikafish 引擎建议，着法已通过本地规则校验。';
     } else {
       const result = await requestSuggestion({ board: state.board, side: state.side, moves: legalMoves(state.board, state.side), settings: state.settings, strength: $('#strength-select').value, signal: controller.signal });
@@ -613,7 +613,7 @@ function renderEngineLines(lines = state.engineLines) {
   for (const line of lines) {
     const moveText = line.pv?.[0];
     let move;
-    try { move = moveText ? { from: fromICCS(moveText.slice(0, 2)), to: fromICCS(moveText.slice(2, 4)) } : null; } catch { move = null; }
+    try { const iccs = engineMoveToICCS(moveText); move = { from: fromICCS(iccs.slice(0, 2)), to: fromICCS(iccs.slice(2, 4)) }; } catch { move = null; }
     if (!move || !legalMoves(state.board, state.side).some((candidate) => sameMove(candidate, move))) continue;
     const row = document.createElement('button'); row.type = 'button'; row.className = 'engine-line';
     const notation = document.createElement('strong');
@@ -649,7 +649,7 @@ async function startPikafish() {
   } catch (error) {
     engine.close(); button.disabled = false; button.textContent = '重试加载';
     status.textContent = `加载失败：${error.message}`;
-    toast('未找到可用的 Pikafish 构建资源，请先按 engine/pikafish/README.md 构建');
+    toast('Pikafish 加载失败，请查看引擎状态中的具体原因');
   }
 }
 
