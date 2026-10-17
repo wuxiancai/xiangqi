@@ -616,7 +616,7 @@ function installEnginePanel() {
   panel.id = 'pikafish-panel';
   panel.className = 'panel engine-panel';
   panel.innerHTML = `<div class="panel-title"><div><h2>Pikafish 引擎</h2><span id="pikafish-status" class="muted" role="status">正在准备本地引擎…</span></div><span class="engine-badge">WASM</span></div><div class="engine-toolbar"><button id="pikafish-start" class="secondary-button">正在加载…</button><button id="pikafish-analyze" class="primary-button" disabled>分析局面</button><label class="engine-depth"><span>深度</span><select id="pikafish-depth" aria-label="搜索深度"><option value="12">快速 · 12 层</option><option value="16">标准 · 16 层</option><option value="20" selected>深入 · 20 层</option></select></label></div><div id="pikafish-lines" class="engine-lines"></div><p class="engine-footnote">引擎就绪后会在每步落子后自动分析红黑双方各自回合的局面；首次加载需下载 NNUE 网络。</p>`;
-  $('.game-sidebar').append(panel);
+  $('.game-sidebar').prepend(panel);
   renderEngineLines();
 }
 

@@ -4,10 +4,11 @@ import { readFile } from 'node:fs/promises';
 
 const read = (path) => readFile(new URL(path, import.meta.url), 'utf8');
 
-test('play sidebar places settings between history and engine', async () => {
+test('play sidebar places the engine above history with settings between them', async () => {
   const [html, app] = await Promise.all([read('../index.html'), read('../src/app.js')]);
-  assert.ok(html.indexOf('class="panel history-panel"') < html.indexOf('class="panel setup-panel"'));
-  assert.match(app, /\.game-sidebar'\)\.append\(panel\)/);
+  assert.ok(html.indexOf('class="panel setup-panel"') < html.indexOf('class="panel history-panel"'));
+  assert.equal((html.match(/class="panel history-panel"/g) ?? []).length, 1);
+  assert.match(app, /\.game-sidebar'\)\.prepend\(panel\)/);
 });
 
 test('play view removes the standalone advice action while keeping AI status output', async () => {
