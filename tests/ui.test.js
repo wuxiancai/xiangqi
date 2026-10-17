@@ -27,7 +27,9 @@ test('study replay draws the current move with the shared analysis arrow rendere
 
 test('red analysis arrow has strong contrast on the wooden board', async () => {
   const css = await read('../styles.css');
+  const app = await read('../src/app.js');
   assert.match(css, /analysis-arrow[^}]*--arrow-color:#f02b22/);
-  assert.match(css, /analysis-arrow \.arrow-visible[^}]*stroke-width:3/);
+  assert.match(css, /analysis-arrow \.arrow-visible[^}]*stroke-width:6/);
   assert.match(css, /analysis-arrow \.arrow-visible[^}]*drop-shadow\(0 0 2px #fff\)/);
+  assert.equal((app.match(/markerWidth="16" markerHeight="16"/g) ?? []).length, 2);
 });
