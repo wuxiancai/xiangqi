@@ -745,7 +745,9 @@ async function initialize() {
   await refreshRecords();
   renderStudyBoard(); renderPlayBoard();
   if ($('#mode-select').value === 'ai' && $('#side-select').value === 'black' && state.side === RED && !state.history.length) scheduleAiMove();
-  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('./service-worker.js').catch(() => {});
+  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+    navigator.serviceWorker.register('./service-worker.js', { updateViaCache: 'none' }).catch(() => {});
+  }
 }
 
 initialize();

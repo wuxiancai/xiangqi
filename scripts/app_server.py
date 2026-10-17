@@ -20,6 +20,8 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_header("Cross-Origin-Opener-Policy", "same-origin")
         self.send_header("Cross-Origin-Embedder-Policy", "require-corp")
         self.send_header("Cross-Origin-Resource-Policy", "same-origin")
+        if self.path.split("?", 1)[0].endswith((".html", ".js", ".css", ".json")) or self.path.split("?", 1)[0].endswith("/"):
+            self.send_header("Cache-Control", "no-cache")
         super().end_headers()
 
     def _json(self, status, payload):
