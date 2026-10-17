@@ -7,7 +7,7 @@ import { playCheckSound, playMoveSound } from './audio.js?v=check-voice-1';
 import { convertTextToRecord, extractText, findExistingImportedRecord, importXqfFolderFiles, MAX_IMPORT_SIZE } from './importer.js';
 import { parseXqf, xqfMovesAsText } from './xqf.js';
 import { cblMovesAsText, parseCbl } from './cbl.js';
-import { engineMoveToICCS, PikafishEngine } from '../engine/pikafish/engine.js?v=fen-orientation-1';
+import { engineMoveToICCS, formatRedEvaluation, PikafishEngine } from '../engine/pikafish/engine.js?v=wdl-score-1';
 
 const categories = ['古谱', '现代对局', '开局', '残局'];
 const labels = { K: '帥', A: '仕', E: '相', R: '車', H: '馬', C: '炮', P: '兵', k: '將', a: '士', e: '象', r: '車', h: '馬', c: '炮', p: '卒' };
@@ -488,6 +488,11 @@ function renderPlayBoard() {
   const endReason = state.adjudication ? '长将判负' : status.reason;
   $('#turn-label').textContent = state.gameOver ? `${names[endStatus.winner]}胜 · ${endReason}` : `${names[state.side]}走棋${status.inCheck ? ' · 将军' : ''}`;
   $('#play-status').textContent = $('#turn-label').textContent;
+  const currentAnalysis = state.engineAnalyses[state.side];
+  const currentLine = currentAnalysis?.position === positionKey(state.board, state.side)
+    ? currentAnalysis.lines.find((line) => line.multipv === 1) ?? null
+    : null;
+  $('#red-evaluation').textContent = formatRedEvaluation(currentLine, currentAnalysis?.side ?? state.side);
   $('#undo-button').disabled = !state.history.length || state.aiBusy;
   $('#restart-button').disabled = state.aiBusy;
   $('#mode-select').disabled = state.aiBusy;

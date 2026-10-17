@@ -26,6 +26,43 @@ export function engineMoveToICCS(move) {
   return `${move[0]}${9 - Number(move[1])}${move[2]}${9 - Number(move[3])}`;
 }
 
+export function parseUciInfoLine(line) {
+  if (!line.startsWith('info ')) return null;
+  const depth = Number(line.match(/\bdepth (\d+)/)?.[1] ?? 0);
+  const multipv = Number(line.match(/\bmultipv (\d+)/)?.[1] ?? 1);
+  const scoreMatch = line.match(/\bscore (cp|mate) (-?\d+)/);
+  const wdlMatch = line.match(/\bwdl (\d+) (\d+) (\d+)/);
+  return {
+    depth,
+    multipv,
+    score: scoreMatch ? { type: scoreMatch[1], value: Number(scoreMatch[2]) } : null,
+    wdl: wdlMatch ? { win: Number(wdlMatch[1]), draw: Number(wdlMatch[2]), loss: Number(wdlMatch[3]) } : null,
+  };
+}
+
+export function toRedPerspective(line, side) {
+  const sign = side === 'red' ? 1 : -1;
+  return {
+    score: line?.score ? { ...line.score, value: line.score.value * sign } : null,
+    wdl: line?.wdl ? {
+      win: sign > 0 ? line.wdl.win : line.wdl.loss,
+      draw: line.wdl.draw,
+      loss: sign > 0 ? line.wdl.loss : line.wdl.win,
+    } : null,
+  };
+}
+
+export function formatRedEvaluation(line, side) {
+  if (!line) return '红方 score cp — · WDL 胜 — 和 — 负 —';
+  const { score, wdl } = toRedPerspective(line, side);
+  const scoreText = score?.type === 'cp'
+    ? `score cp ${score.value > 0 ? '+' : ''}${score.value}`
+    : score?.type === 'mate' ? `mate ${score.value > 0 ? '+' : ''}${score.value}` : 'score cp —';
+  const percent = (value) => `${(value / 10).toFixed(1).replace(/\.0$/, '')}%`;
+  const wdlText = wdl ? `胜 ${percent(wdl.win)} 和 ${percent(wdl.draw)} 负 ${percent(wdl.loss)}` : '胜 — 和 — 负 —';
+  return `红方 ${scoreText} · WDL ${wdlText}`;
+}
+
 const asset = (name) => new URL(`./dist/${name}`, import.meta.url).href;
 
 export class PikafishEngine {
@@ -59,6 +96,7 @@ export class PikafishEngine {
         } else if (data.type === 'line') {
           this.#line(data.line);
           if (data.line === 'uciok' && !this.ready) {
+            worker.postMessage({ type: 'command', command: 'setoption name UCI_ShowWDL value true' });
             worker.postMessage({ type: 'command', command: 'isready' });
           } else if (data.line === 'readyok' && !this.ready) {
             this.ready = true;
@@ -77,13 +115,11 @@ export class PikafishEngine {
 
   #line(line) {
     if (line.startsWith('info ')) {
-      const depth = Number(line.match(/\bdepth (\d+)/)?.[1] ?? 0);
-      const multipv = Number(line.match(/\bmultipv (\d+)/)?.[1] ?? 1);
-      const score = line.match(/\bscore (cp|mate) (-?\d+)/);
+      const info = parseUciInfoLine(line);
       const pv = line.match(/\bpv (.+)$/)?.[1]?.split(/\s+/) ?? [];
       if (pv.length && this.pending) {
-        const item = { multipv, depth, score: score ? { type: score[1], value: Number(score[2]) } : null, pv };
-        this.pending.lines.set(multipv, item);
+        const item = { ...info, pv };
+        this.pending.lines.set(info.multipv, item);
         this.onUpdate({ type: 'analysis', analysisId: this.pending.id, board: this.pending.board, side: this.pending.side, lines: [...this.pending.lines.values()].sort((a, b) => a.multipv - b.multipv) });
       }
       return;

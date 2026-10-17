@@ -1,5 +1,11 @@
 # 项目交接
 
+## 2026-10-17 红方 score cp 与 WDL 显示
+
+- 对弈棋盘状态栏在行棋状态旁显示红方视角 score cp 和 WDL 胜/和/负百分比；开启 Pikafish `UCI_ShowWDL`，以当前局面主变（MultiPV 1）结果更新。黑方行棋时 cp 取反、WDL 胜负交换，和棋概率不变；暂无当前局面分析时显示占位符。
+- `npm test` 51 项通过。隔离浏览器中实际加载本机 Pikafish WASM 并完成分析，状态栏显示 `红方 score cp +32 · WDL 胜 8.5% 和 90.5% 负 1%`；390px 窄屏下信息完整显示且标题栏无横向溢出，浏览器控制台无错误。
+- 390px 窄屏评分字号设为 9px，Service Worker 缓存升至 v60，引擎模块 URL 更新为 `wdl-score-1`。
+
 ## 当前状态
 
 首版单页应用已实现，详见 `README.md`；产品范围见 `PROJECT_CONTEXT.md`，进度清单见 `TASKS.md`，技术取舍见 `DECISIONS.md`。

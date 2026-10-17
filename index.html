@@ -58,7 +58,7 @@
       <section id="play-view" class="view">
         <div class="play-layout">
           <section class="play-board-column panel">
-            <div class="board-header"><div><span class="live-dot"></span><span id="play-status">红方走棋</span></div><button id="play-flip" class="text-button">翻转棋盘</button></div>
+            <div class="board-header"><div><span class="live-dot"></span><span id="play-status">红方走棋</span><span id="red-evaluation" class="red-evaluation" aria-live="polite">红方 score cp — · WDL 胜 — 和 — 负 —</span></div><button id="play-flip" class="text-button">翻转棋盘</button></div>
             <div class="board-frame"><svg id="play-board" class="chessboard" viewBox="0 0 500 550" role="grid" aria-label="对弈棋盘"></svg></div>
             <div class="board-legend"><span class="threat-key red" aria-hidden="true"></span><span>有己方棋子保护</span><span class="threat-key green" aria-hidden="true"></span><span>无保护，可能被吃</span></div>
             <div class="play-actions"><button id="undo-button" class="secondary-button">悔棋</button><button id="restart-button" class="secondary-button">重新开始</button></div>

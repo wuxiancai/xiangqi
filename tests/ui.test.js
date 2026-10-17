@@ -19,6 +19,13 @@ test('play view removes the standalone advice action while keeping AI status out
   assert.doesNotMatch(app, /requestAdvice|suggest-button/);
 });
 
+test('play board header shows red-normalized score cp and WDL output', async () => {
+  const [html, app, engine] = await Promise.all([read('../index.html'), read('../src/app.js'), read('../engine/pikafish/engine.js')]);
+  assert.match(html, /id="red-evaluation"[^>]*>红方 score cp — · WDL 胜/);
+  assert.match(app, /formatRedEvaluation\(currentLine, currentAnalysis\?\.side \?\? state\.side\)/);
+  assert.match(engine, /setoption name UCI_ShowWDL value true/);
+});
+
 test('study replay draws the current move with the shared analysis arrow renderer', async () => {
   const app = await read('../src/app.js');
   assert.match(app, /const arrows = previous \? \[\{ \.\.\.previous, side: previousSide \}\] : \[\]/);
