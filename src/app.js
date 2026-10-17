@@ -1,4 +1,4 @@
-import { BLACK, RED, applyMove, fileOf, gameStatus, initialBoard, isInCheck, kindOf, legalMoves, otherSide, pieceThreatStatus, rankOf, sameMove, sideOf, toICCS, validateAndReplay } from './rules.js';
+import { BLACK, RED, applyMove, fileOf, fromICCS, gameStatus, initialBoard, isInCheck, kindOf, legalMoves, otherSide, pieceThreatStatus, rankOf, sameMove, sideOf, toICCS, validateAndReplay } from './rules.js';
 import { chooseLocalMoveAsync, requestSuggestion } from './ai.js';
 import { loadSettings, recordRepository, saveSettings } from './storage.js';
 import { chineseNotation } from './notation.js';
@@ -7,6 +7,7 @@ import { playMoveSound } from './audio.js';
 import { convertTextToRecord, extractText, findExistingImportedRecord, importXqfFolderFiles, MAX_IMPORT_SIZE } from './importer.js';
 import { parseXqf, xqfMovesAsText } from './xqf.js';
 import { cblMovesAsText, parseCbl } from './cbl.js';
+import { PikafishEngine } from '../engine/pikafish/engine.js';
 
 const categories = ['古谱', '现代对局', '开局', '残局'];
 const labels = { K: '帥', A: '仕', E: '相', R: '車', H: '馬', C: '炮', P: '兵', k: '將', a: '士', e: '象', r: '車', h: '馬', c: '炮', p: '卒' };
@@ -15,6 +16,7 @@ const $ = (selector) => document.querySelector(selector);
 const state = {
   view: 'study', records: [], builtinRecords: [], currentRecord: null, studyPly: 0, studyFlipped: false, selectedCategory: '', query: '', timer: null,
   expandedRecordGroups: new Set(), board: initialBoard(), side: RED, history: [], playFlipped: false, gameOver: false, adjudication: null, settings: {}, aiBusy: false,
+  pikafish: null, engineLines: [],
 };
 let moveAudio;
 
@@ -475,6 +477,7 @@ function renderPlayBoard() {
   $('#mode-select').disabled = state.aiBusy;
   $('#side-select').disabled = state.aiBusy;
   renderHistory();
+  renderEngineLines();
 }
 
 function renderHistory() {
@@ -508,6 +511,7 @@ async function playMove(move) {
   state.board = applyMove(state.board, move);
   state.history.push({ move, captured, previousBoard, previousSide: state.side });
   state.side = otherSide(state.side); state.selectedSquare = null;
+  state.engineLines = [];
   const status = gameStatus(state.board, state.side);
   const initialPosition = state.history[0];
   const trace = [{ key: `${initialPosition.previousBoard.map((piece) => piece ?? '.').join('')}:${initialPosition.previousSide}` }];
@@ -530,10 +534,16 @@ async function scheduleAiMove() {
   const controller = new AbortController(); const timeout = setTimeout(() => controller.abort(), 20000);
   let move;
   try {
-    const result = await requestSuggestion({ board: state.board, side: state.side, moves: legalMoves(state.board, state.side), settings: state.settings, strength: $('#strength-select').value, signal: controller.signal });
-    move = result.move;
-    if (result.provider === 'external') $('#ai-output').textContent = `AI 分析：${result.explanation}（外部模型建议，棋力未认证）`;
-    else $('#ai-output').textContent = `AI 建议：${result.explanation}`;
+    if (state.pikafish?.ready) {
+      const uciMove = await state.pikafish.analyze(state.board, state.side, { depth: Number($('#pikafish-depth').value), multiPv: 1 });
+      if (/^[a-i][0-9][a-i][0-9]$/.test(uciMove)) move = { from: fromICCS(uciMove.slice(0, 2)), to: fromICCS(uciMove.slice(2, 4)) };
+      $('#ai-output').textContent = 'Pikafish 引擎建议，着法已通过本地规则校验。';
+    } else {
+      const result = await requestSuggestion({ board: state.board, side: state.side, moves: legalMoves(state.board, state.side), settings: state.settings, strength: $('#strength-select').value, signal: controller.signal });
+      move = result.move;
+      if (result.provider === 'external') $('#ai-output').textContent = `AI 分析：${result.explanation}（外部模型建议，棋力未认证）`;
+      else $('#ai-output').textContent = `AI 建议：${result.explanation}`;
+    }
   } catch (error) {
     if (state.settings.apiUrl && state.settings.apiKey && state.settings.model) {
       move = await chooseLocalMoveAsync(state.board, state.side, $('#strength-select').value);
@@ -581,6 +591,77 @@ async function requestAdvice() {
   }
 }
 
+function installEnginePanel() {
+  if ($('#pikafish-panel')) return;
+  const panel = document.createElement('section');
+  panel.id = 'pikafish-panel';
+  panel.className = 'panel engine-panel';
+  panel.innerHTML = `<div class="panel-title"><div><h2>Pikafish 引擎</h2><span id="pikafish-status" class="muted" role="status">未加载 · 本地运行</span></div><span class="engine-badge">WASM</span></div><div class="engine-actions"><button id="pikafish-start" class="secondary-button">加载引擎</button><button id="pikafish-analyze" class="primary-button" disabled>分析局面</button></div><label class="engine-depth">搜索深度<select id="pikafish-depth"><option value="12">快速 · 12 层</option><option value="16" selected>标准 · 16 层</option><option value="20">深入 · 20 层</option></select></label><div id="pikafish-lines" class="engine-lines"><p class="move-empty">加载 Pikafish 后显示候选着法</p></div><p class="engine-footnote">首次加载需下载 NNUE 网络；引擎仅在本机浏览器运行。</p>`;
+  $('.game-sidebar').insertBefore(panel, $('.history-panel'));
+}
+
+function renderEngineLines(lines = state.engineLines) {
+  const container = $('#pikafish-lines');
+  if (!container) return;
+  container.replaceChildren();
+  if (!lines.length) {
+    const empty = document.createElement('p'); empty.className = 'move-empty'; empty.textContent = '暂无候选着法'; container.append(empty); return;
+  }
+  for (const line of lines) {
+    const moveText = line.pv?.[0];
+    let move;
+    try { move = moveText ? { from: fromICCS(moveText.slice(0, 2)), to: fromICCS(moveText.slice(2, 4)) } : null; } catch { move = null; }
+    if (!move || !legalMoves(state.board, state.side).some((candidate) => sameMove(candidate, move))) continue;
+    const row = document.createElement('button'); row.type = 'button'; row.className = 'engine-line';
+    const notation = document.createElement('strong');
+    notation.textContent = chineseNotation(state.board, move, state.side);
+    const score = document.createElement('span');
+    score.textContent = line.score ? (line.score.type === 'mate' ? `杀棋 ${line.score.value}` : `${(line.score.value / 100).toFixed(2)} 分`) : '评估中';
+    const depth = document.createElement('small'); depth.textContent = `深度 ${line.depth}`;
+    row.append(notation, score, depth);
+    row.addEventListener('click', async () => {
+      if (state.gameOver || state.aiBusy || !legalMoves(state.board, state.side).some((candidate) => sameMove(candidate, move))) return;
+      await playMove(move);
+    });
+    container.append(row);
+  }
+}
+
+async function startPikafish() {
+  const button = $('#pikafish-start'); const status = $('#pikafish-status');
+  button.disabled = true; button.textContent = '正在加载…';
+  status.textContent = '正在下载并初始化引擎资源…';
+  const engine = new PikafishEngine((message) => {
+    if (message.type === 'progress') {
+      status.textContent = message.total ? `下载 NNUE ${Math.round(message.loaded / message.total * 100)}%` : `下载 NNUE ${(message.loaded / 1048576).toFixed(1)} MiB`;
+    } else if (message.type === 'status') status.textContent = message.text;
+    else if (message.type === 'analysis') { state.engineLines = message.lines; renderEngineLines(); }
+  });
+  try {
+    await engine.start();
+    state.pikafish?.close(); state.pikafish = engine;
+    status.textContent = '已就绪 · Pikafish WebAssembly';
+    $('#pikafish-analyze').disabled = false;
+    button.textContent = '引擎已加载';
+  } catch (error) {
+    engine.close(); button.disabled = false; button.textContent = '重试加载';
+    status.textContent = `加载失败：${error.message}`;
+    toast('未找到可用的 Pikafish 构建资源，请先按 engine/pikafish/README.md 构建');
+  }
+}
+
+async function analyzePikafish() {
+  if (!state.pikafish || state.gameOver) return;
+  const button = $('#pikafish-analyze'); button.disabled = true; button.textContent = '分析中…';
+  $('#pikafish-status').textContent = `分析局面 · ${names[state.side]}行棋`;
+  try {
+    await state.pikafish.analyze(state.board, state.side, { depth: Number($('#pikafish-depth').value), multiPv: 3 });
+    $('#pikafish-status').textContent = '分析完成';
+  } catch (error) {
+    $('#pikafish-status').textContent = `分析中断：${error.message}`;
+  } finally { button.disabled = false; button.textContent = '重新分析'; }
+}
+
 function setView(view) {
   stopPlayback(); state.view = view;
   document.querySelectorAll('.nav-button').forEach((button) => button.classList.toggle('active', button.dataset.view === view));
@@ -590,6 +671,7 @@ function setView(view) {
 }
 
 function bindEvents() {
+  installEnginePanel();
   document.addEventListener('pointerdown', unlockMoveAudio);
   document.addEventListener('keydown', unlockMoveAudio);
   document.querySelectorAll('.nav-button').forEach((button) => button.addEventListener('click', () => setView(button.dataset.view)));
@@ -618,6 +700,8 @@ function bindEvents() {
   $('#strength-select').addEventListener('change', saveGame);
   $('#side-select').addEventListener('change', () => { if ($('#mode-select').value === 'ai') { state.board = initialBoard(); state.side = RED; state.history = []; state.gameOver = false; state.adjudication = null; renderPlayBoard(); saveGame(); if ($('#side-select').value === 'black') scheduleAiMove(); } });
   $('#suggest-button').addEventListener('click', requestAdvice);
+  $('#pikafish-start').addEventListener('click', startPikafish);
+  $('#pikafish-analyze').addEventListener('click', analyzePikafish);
   $('#settings-button').addEventListener('click', openSettings);
   $('#clear-key').addEventListener('click', async () => { state.settings = { ...state.settings, apiKey: '' }; await saveSettings(state.settings); $('#api-key').value = ''; toast('本机 API 密钥已清除'); });
   $('#clear-data').addEventListener('click', async () => {
@@ -637,6 +721,10 @@ function openSettings() {
 }
 
 async function initialize() {
+  document.querySelector('[data-view="study"]').textContent = '棋谱复盘';
+  document.querySelector('[data-view="play"]').textContent = 'AI 研究与对弈';
+  [...$('#strength-select').options].forEach((option, index) => { option.textContent = ['快速本地搜索', '标准本地搜索', '深度本地搜索', '本地搜索上限'][index]; });
+  $('.disclaimer').textContent = '已加载 Pikafish 时，AI 对弈优先使用引擎；否则使用未经基准认证的本地搜索。外部 API 只提供分析建议。';
   $('#strength-select').value = 'max';
   bindEvents();
   try {

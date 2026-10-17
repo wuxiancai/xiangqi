@@ -79,3 +79,7 @@
 6. **适配与发布**：桌面/手机验收，HTTPS 静态部署、备份/导出说明、隐私与来源说明。
 
 首版完成的定义是上述 Must 与验收清单全部通过；后端数据库和未列入首版的供应商适配不得成为发布阻塞条件。
+
+## Pikafish 浏览器引擎补充
+
+对弈工作台可选加载 Pikafish WebAssembly 引擎，用于 MultiPV 候选分析和 AI 应手；本地规则仍负责校验并执行实际走法。引擎及 NNUE 网络不随仓库分发，用户可按 `engine/pikafish/README.md` 在本机构建。Pikafish 源码为 GPL-3.0-or-later，NNUE 权重另有非商业限制；强度等级须经独立基准后才可标定。多线程 WASM 需要 COOP/COEP 隔离响应头。

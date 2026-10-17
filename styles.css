@@ -132,3 +132,25 @@ button:active,.import-button:active{transform:translateY(1px)}
 .library-panel .search-box{height:40px;margin:12px 0 10px}
 .library-panel .filter-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr)) minmax(0,1.45fr) repeat(2,minmax(0,1fr));gap:3px;margin-bottom:10px}
 .library-panel .filter-chip{display:flex;min-width:0;min-height:30px;align-items:center;justify-content:center;padding:4px 1px;font-size:9px;line-height:1.1;white-space:nowrap}
+
+/* Xiangqi AI study workspace */
+.play-layout{grid-template-columns:minmax(0,1fr) minmax(320px,380px);gap:22px;max-width:1320px;margin:0 auto;align-items:start}
+.play-board-column{padding:18px 22px 20px;background:linear-gradient(145deg,#fffdf8,#f8f5ec);border-color:#e5dece;box-shadow:0 18px 48px rgba(56,48,32,.09)}
+.play-board-column .board-header{height:42px;font-size:13px}
+.play-board-column .board-frame{width:min(100%,660px);padding:10px;border-radius:14px;box-shadow:0 18px 38px rgba(64,47,18,.15),inset 0 0 0 1px #99713e44}
+.game-sidebar{gap:12px}
+.setup-panel,.history-panel,.engine-panel{padding:18px;border-radius:14px}
+.engine-panel{border-color:#d9e4dc;background:linear-gradient(150deg,#fff 0%,#f3f8f3 100%)}
+.engine-badge{border:1px solid #c7dacd;border-radius:99px;background:#e8f2e9;color:#28644e;padding:4px 8px;font-size:9px;font-weight:700;letter-spacing:.08em}
+.engine-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:15px}
+.engine-actions button{min-height:42px;padding:0 10px;border-radius:9px;font-size:12px}
+.engine-lines{display:grid;gap:6px;margin-top:12px}
+.engine-line{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:9px;width:100%;min-height:40px;padding:7px 10px;text-align:left;background:#fff;border:1px solid #e6ece5;border-radius:8px;color:#34453a}
+.engine-line:hover{border-color:#9fbea7;background:#f7fbf7}
+.engine-line strong{font-size:12px}.engine-line span,.engine-line small{font-size:10px;color:#758078}.engine-line small{white-space:nowrap}
+.engine-footnote{margin:11px 0 0;color:#8a938b;font-size:10px;line-height:1.6}
+.engine-depth{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:12px;margin-top:11px;color:#68766d;font-size:11px}
+.engine-depth select{height:34px;border:1px solid #e2e8e1;border-radius:8px;background:#fff;padding:0 9px;color:#3d4a40}
+@media(max-width:960px){.play-layout{grid-template-columns:minmax(0,1fr) minmax(290px,330px);gap:14px}.play-board-column{padding:14px}.play-board-column .board-frame{width:min(100%,calc(100vh - 300px))}}
+@media(max-width:720px){.play-layout{display:flex;flex-direction:column;gap:12px}.play-board-column{width:100%;padding:11px 8px 13px;border-radius:12px}.play-board-column .board-frame{width:min(100%,calc(100vw - 40px));min-width:0;padding:6px}.game-sidebar{width:100%;grid-template-columns:1fr}.engine-panel,.setup-panel,.history-panel{padding:14px}.engine-actions button{min-height:44px}.engine-line{min-height:44px}.board-legend{flex-wrap:wrap}}
+@media(max-width:390px){.app-shell{padding:0 10px}.play-board-column .board-frame{width:min(100%,calc(100vw - 34px))}.board-header{font-size:11px}.play-board-column{padding:9px 6px}.engine-line{gap:5px;padding:6px 7px}.engine-line strong{font-size:11px}}

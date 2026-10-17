@@ -139,3 +139,12 @@
 - 原因：对弈页 `#ai-output` 被移除，但局势建议与 AI 自动走子代码仍向该节点写结果，造成点击无反馈；AI 模式下还可能令 `aiBusy` 无法复位。
 - 恢复建议输出区，加入分析中提示、无合法着法反馈，并在兼容 API 失败时回退到本地搜索并给出经过合法性校验的中文着法。Service Worker 缓存升至 v39。
 - 已运行 JavaScript 语法检查与 `git diff --check`；未运行测试套件。
+
+# 2026-10-17 AI 研究工作台与 Pikafish
+
+- 对弈页调整为棋盘优先布局，侧栏增加 Pikafish 引擎、分析深度、候选着法和局势复盘；手机宽度纵向显示且优先棋盘。导航文案改为“棋谱复盘 / AI 研究与对弈”，本地搜索强度不再显示“业余/高手/最强”等未经标定等级。
+- 增加 `engine/pikafish/`：固定官方 Pikafish 源码修订，应用浏览器 UCI 包装补丁，提供 Emscripten Docker 构建脚本、NNUE 独立许可、来源说明及 Worker/JS 分析适配器。构建资源需本机运行 `bash engine/pikafish/build.sh` 下载和生成，`dist/` 不入 Git。
+- Pikafish 可用于候选局面分析；加载后亦可作为 AI 对弈引擎。执行引擎走法前用现有合法着法集合校验。未构建/未加载时使用原本地搜索 AI。
+- 自托管 Python 服务新增 COOP/COEP/CORP 响应头以启用多线程 WebAssembly；Service Worker 壳缓存升至 v40，并跳过大体积引擎构建资源。
+- 已通过 Node/Python/Bash 语法检查与 `git diff --check`；未运行测试套件。尝试检查 Docker 环境时发现 Docker daemon 未启动，因此未运行 Pikafish Emscripten 构建；引擎实际加载、候选线和走子仍待构建后验收。浏览器已目视检查窄屏 AI 对弈布局。公开/商业分发前需再次核实 GPL-3.0 源码提供义务及 NNUE 非商业使用限制。
+- 工作区原有用户修改 `README.md`、`index.html` 和若干未跟踪文件均保留；未纳入本轮提交。

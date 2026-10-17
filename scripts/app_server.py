@@ -16,6 +16,12 @@ class Handler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(ROOT), **kwargs)
 
+    def end_headers(self):
+        self.send_header("Cross-Origin-Opener-Policy", "same-origin")
+        self.send_header("Cross-Origin-Embedder-Policy", "require-corp")
+        self.send_header("Cross-Origin-Resource-Policy", "same-origin")
+        super().end_headers()
+
     def _json(self, status, payload):
         body = json.dumps(payload, ensure_ascii=False).encode()
         self.send_response(status)

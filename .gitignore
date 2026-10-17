@@ -1,2 +1,4 @@
 data/imported/*.json
 data/imported/*.tmp
+.build/
+engine/pikafish/dist/
