@@ -173,3 +173,10 @@
 - 候选解析统一使用该分析快照携带的 side 和 board 做本地合法性校验。若引擎的 PV 无有效候选，则校验并回退到同一分析请求返回的 bestmove；若局面本身有合法着法但引擎结果不匹配，界面不再误称“无合法着法”。
 - “加载引擎”“重新分析”“搜索深度”移到同一行响应式工具栏。Service Worker 缓存升至 v48，Pikafish 适配器模块 URL 更新为 `multipv-order-1`。
 - `npm test` 37 项通过；`node --check src/app.js`、`node --check engine/pikafish/engine.js` 与 `git diff --check` 通过。隔离浏览器加载真实 Pikafish WASM，确认开局只出现一条最优箭头；按箭头行棋后红黑双方均生成合法候选，双方历史结果保留且不再显示误导性的“无合法着法”。
+
+# 2026-10-17 箭头改为纯显示并默认加载引擎
+
+- 棋盘分析箭头移除按钮角色、键盘焦点和走棋回调；整个箭头组设置 `pointer-events: none`，棋盘事件只响应方格。箭头改为细直线并侧向偏移，避免遮住棋子文字，指向当前最优着法的目标格。
+- 初始化数据后自动启动 Pikafish；自动加载失败时状态区显示原因并允许重试，不弹出阻断对局的错误提示。搜索深度默认改为最高的 20 层；Service Worker 壳缓存升至 v49，适配器模块 URL 更新为 `arrow-overlay-1`。
+- 隔离端口 8007 的浏览器加载本机真实 Pikafish WASM，确认自动就绪、红方分析达到深度 20、默认下拉值为 20；点击箭头附近的棋子仍选中，再点击目标格完成“兵三进一”，棋盘/棋谱更新并自动开始黑方分析。截图确认细箭头未遮住棋子字样。`node --check`（app.js、engine.js、service-worker.js）和 `git diff --check` 通过；未运行测试套件。
+- 保留工作区已有的 README.md、index.html 修改及非跟踪数据；本轮仅提交应用、样式、Service Worker 和交接文档相关文件。
