@@ -32,6 +32,8 @@ export class PikafishEngine {
     this.worker = null;
     this.ready = false;
     this.pending = null;
+    this.queued = null;
+    this.analysisId = 0;
     this.lines = [];
   }
 
@@ -80,25 +82,47 @@ export class PikafishEngine {
         const item = { depth, score: score ? { type: score[1], value: Number(score[2]) } : null, pv };
         const key = pv[0];
         this.pending.lines.set(key, item);
-        this.onUpdate({ type: 'analysis', lines: [...this.pending.lines.values()].sort((a, b) => b.depth - a.depth).slice(0, 5) });
+        this.onUpdate({ type: 'analysis', analysisId: this.pending.id, board: this.pending.board, side: this.pending.side, lines: [...this.pending.lines.values()].sort((a, b) => b.depth - a.depth).slice(0, 5) });
       }
       return;
     }
     if (line.startsWith('bestmove ')) {
       const bestmove = line.split(/\s+/)[1];
-      if (this.pending) { this.pending.resolve(bestmove); this.pending = null; }
+      if (this.pending) {
+        const finished = this.pending;
+        this.pending = null;
+        finished.resolve(bestmove);
+        if (this.queued) {
+          const next = this.queued;
+          this.queued = null;
+          this.#startAnalysis(next);
+        }
+      }
     }
   }
 
+  // Supersede an in-flight position with the newest request after UCI stops.
   analyze(board, side, { depth = 14, multiPv = 3 } = {}) {
     if (!this.ready) return Promise.reject(new Error('Pikafish 尚未就绪'));
-    if (this.pending) return Promise.reject(new Error('引擎正在分析其他局面'));
-    return new Promise((resolve, reject) => {
-      this.pending = { resolve: (move) => { this.pending = null; resolve(move); }, reject, lines: new Map() };
-      this.worker.postMessage({ type: 'command', command: `setoption name MultiPV value ${multiPv}` });
-      this.worker.postMessage({ type: 'command', command: `position fen ${boardToFen(board, side)}` });
-      this.worker.postMessage({ type: 'command', command: `go depth ${depth}` });
-    });
+    const request = { id: ++this.analysisId, board: [...board], side, depth, multiPv, lines: new Map() };
+    const promise = new Promise((resolve, reject) => { request.resolve = resolve; request.reject = reject; });
+    promise.analysisId = request.id;
+    if (this.pending) {
+      if (this.queued) {
+        const error = new Error('分析请求已被更新局面取代'); error.name = 'AbortError';
+        this.queued.reject(error);
+      }
+      this.queued = request;
+      this.worker.postMessage({ type: 'command', command: 'stop' });
+    } else this.#startAnalysis(request);
+    return promise;
+  }
+
+  #startAnalysis(request) {
+    this.pending = request;
+    this.worker.postMessage({ type: 'command', command: `setoption name MultiPV value ${request.multiPv}` });
+    this.worker.postMessage({ type: 'command', command: `position fen ${boardToFen(request.board, request.side)}` });
+    this.worker.postMessage({ type: 'command', command: `go depth ${request.depth}` });
   }
 
   stop() {
@@ -106,10 +130,14 @@ export class PikafishEngine {
   }
 
   close() {
-    this.stop();
+    const error = new Error('Pikafish 已关闭'); error.name = 'AbortError';
+    this.pending?.reject(error);
+    this.queued?.reject(error);
     this.worker?.terminate();
     this.worker = null;
     this.ready = false;
     this.pending = null;
+    this.queued = null;
   }
+
 }

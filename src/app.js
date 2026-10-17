@@ -7,7 +7,7 @@ import { playCheckSound, playMoveSound } from './audio.js?v=check-sound-1';
 import { convertTextToRecord, extractText, findExistingImportedRecord, importXqfFolderFiles, MAX_IMPORT_SIZE } from './importer.js';
 import { parseXqf, xqfMovesAsText } from './xqf.js';
 import { cblMovesAsText, parseCbl } from './cbl.js';
-import { engineMoveToICCS, PikafishEngine } from '../engine/pikafish/engine.js';
+import { engineMoveToICCS, PikafishEngine } from '../engine/pikafish/engine.js?v=auto-analysis-2';
 
 const categories = ['古谱', '现代对局', '开局', '残局'];
 const labels = { K: '帥', A: '仕', E: '相', R: '車', H: '馬', C: '炮', P: '兵', k: '將', a: '士', e: '象', r: '車', h: '馬', c: '炮', p: '卒' };
@@ -16,7 +16,7 @@ const $ = (selector) => document.querySelector(selector);
 const state = {
   view: 'study', records: [], builtinRecords: [], currentRecord: null, studyPly: 0, studyFlipped: false, selectedCategory: '', query: '', timer: null,
   expandedRecordGroups: new Set(), board: initialBoard(), side: RED, history: [], playFlipped: false, gameOver: false, adjudication: null, settings: {}, aiBusy: false,
-  pikafish: null, engineLines: [],
+  pikafish: null, engineAnalyses: { red: null, black: null }, engineAnalysisTask: null, engineAnalysisTarget: null,
 };
 let moveAudio;
 
@@ -482,6 +482,8 @@ function renderPlayBoard() {
   renderEngineLines();
 }
 
+function positionKey(board, side) { return `${board.join('')}:${side}`; }
+
 function renderHistory() {
   const container = $('#play-history'); container.replaceChildren();
   if (!state.history.length) { const empty = document.createElement('span'); empty.className = 'move-empty'; empty.textContent = '棋局尚未开始'; container.append(empty); return; }
@@ -513,7 +515,6 @@ async function playMove(move) {
   state.board = applyMove(state.board, move);
   state.history.push({ move, captured, previousBoard, previousSide: state.side });
   state.side = otherSide(state.side); state.selectedSquare = null;
-  state.engineLines = [];
   const status = gameStatus(state.board, state.side);
   if (status.inCheck) playCheckSound(moveAudio);
   const initialPosition = state.history[0];
@@ -529,6 +530,7 @@ async function playMove(move) {
   if (state.gameOver) { toast(`${names[state.adjudication?.winner ?? status.winner]}胜：${state.adjudication?.reason ?? status.reason}`); return; }
   const mode = $('#mode-select').value; const userSide = $('#side-select').value;
   if (mode === 'ai' && state.side !== userSide) await scheduleAiMove();
+  else if (state.pikafish?.ready) void requestPikafishAnalysis();
 }
 
 async function scheduleAiMove() {
@@ -538,7 +540,7 @@ async function scheduleAiMove() {
   let move;
   try {
     if (state.pikafish?.ready) {
-      const uciMove = await state.pikafish.analyze(state.board, state.side, { depth: Number($('#pikafish-depth').value), multiPv: 1 });
+      const uciMove = await requestPikafishAnalysis({ multiPv: 1 });
       if (/^[a-i][0-9][a-i][0-9]$/.test(uciMove)) { const iccs = engineMoveToICCS(uciMove); move = { from: fromICCS(iccs.slice(0, 2)), to: fromICCS(iccs.slice(2, 4)) }; }
       $('#ai-output').textContent = 'Pikafish 引擎建议，着法已通过本地规则校验。';
     } else {
@@ -568,6 +570,16 @@ function undoMove() {
     const last = state.history.pop(); state.board = last.previousBoard; state.side = last.previousSide;
   }
   state.gameOver = false; state.adjudication = null; state.selectedSquare = null; renderPlayBoard(); saveGame();
+  if (state.pikafish?.ready) void requestPikafishAnalysis();
+}
+
+function resetEngineAnalyses() {
+  state.pikafish?.stop();
+  state.engineAnalyses = { red: null, black: null };
+  state.engineAnalysisTask = null;
+  state.engineAnalysisTarget = null;
+  const button = $('#pikafish-analyze');
+  if (button) { button.disabled = !state.pikafish?.ready; button.textContent = '重新分析'; }
 }
 
 async function requestAdvice() {
@@ -599,34 +611,88 @@ function installEnginePanel() {
   const panel = document.createElement('section');
   panel.id = 'pikafish-panel';
   panel.className = 'panel engine-panel';
-  panel.innerHTML = `<div class="panel-title"><div><h2>Pikafish 引擎</h2><span id="pikafish-status" class="muted" role="status">未加载 · 本地运行</span></div><span class="engine-badge">WASM</span></div><div class="engine-actions"><button id="pikafish-start" class="secondary-button">加载引擎</button><button id="pikafish-analyze" class="primary-button" disabled>分析局面</button></div><label class="engine-depth">搜索深度<select id="pikafish-depth"><option value="12">快速 · 12 层</option><option value="16" selected>标准 · 16 层</option><option value="20">深入 · 20 层</option></select></label><div id="pikafish-lines" class="engine-lines"><p class="move-empty">加载 Pikafish 后显示候选着法</p></div><p class="engine-footnote">首次加载需下载 NNUE 网络；引擎仅在本机浏览器运行。</p>`;
+  panel.innerHTML = `<div class="panel-title"><div><h2>Pikafish 引擎</h2><span id="pikafish-status" class="muted" role="status">未加载 · 本地运行</span></div><span class="engine-badge">WASM</span></div><div class="engine-actions"><button id="pikafish-start" class="secondary-button">加载引擎</button><button id="pikafish-analyze" class="primary-button" disabled>分析局面</button></div><label class="engine-depth">搜索深度<select id="pikafish-depth"><option value="12">快速 · 12 层</option><option value="16" selected>标准 · 16 层</option><option value="20">深入 · 20 层</option></select></label><div id="pikafish-lines" class="engine-lines"></div><p class="engine-footnote">引擎就绪后会在每步落子后自动分析红黑双方各自回合的局面；首次加载需下载 NNUE 网络。</p>`;
   $('.game-sidebar').insertBefore(panel, $('.history-panel'));
+  renderEngineLines();
 }
 
-function renderEngineLines(lines = state.engineLines) {
+function renderEngineLines() {
   const container = $('#pikafish-lines');
   if (!container) return;
   container.replaceChildren();
-  if (!lines.length) {
-    const empty = document.createElement('p'); empty.className = 'move-empty'; empty.textContent = '暂无候选着法'; container.append(empty); return;
+  for (const side of [RED, BLACK]) {
+    const analysis = state.engineAnalyses[side];
+    const current = analysis?.position === positionKey(state.board, state.side);
+    const section = document.createElement('section'); section.className = `engine-side-analysis ${side}`;
+    const heading = document.createElement('div'); heading.className = 'engine-side-heading';
+    const title = document.createElement('strong'); title.textContent = `${names[side]}自动分析`;
+    const context = document.createElement('small'); context.textContent = analysis ? (current ? '当前局面' : analysis.ply === 0 ? '开局局面' : `第 ${analysis.ply} 着后`) : `等待${names[side]}行棋时自动分析`;
+    heading.append(title, context); section.append(heading);
+    if (analysis) {
+      const status = document.createElement('p'); status.className = 'engine-side-status'; status.textContent = analysis.status; section.append(status);
+      const rows = document.createElement('div'); rows.className = 'engine-side-lines';
+      for (const line of analysis.lines) {
+        const moveText = line.pv?.[0];
+        let move;
+        try { const iccs = engineMoveToICCS(moveText); move = { from: fromICCS(iccs.slice(0, 2)), to: fromICCS(iccs.slice(2, 4)) }; } catch { move = null; }
+        if (!move || !legalMoves(analysis.board, side).some((candidate) => sameMove(candidate, move))) continue;
+        const row = document.createElement(current ? 'button' : 'div');
+        if (current) row.type = 'button';
+        row.className = `engine-line${current ? '' : ' historical'}`;
+        const notation = document.createElement('strong'); notation.textContent = chineseNotation(analysis.board, move, side);
+        const score = document.createElement('span');
+        score.textContent = line.score ? (line.score.type === 'mate' ? `杀棋 ${line.score.value}` : `${(line.score.value / 100).toFixed(2)} 分`) : '评估中';
+        const depth = document.createElement('small'); depth.textContent = `深度 ${line.depth}`;
+        row.append(notation, score, depth);
+        if (current) row.addEventListener('click', async () => {
+          if (state.gameOver || state.aiBusy || analysis.position !== positionKey(state.board, state.side) || !legalMoves(state.board, state.side).some((candidate) => sameMove(candidate, move))) return;
+          await playMove(move);
+        });
+        rows.append(row);
+      }
+      if (!rows.children.length) { const empty = document.createElement('p'); empty.className = 'move-empty'; empty.textContent = analysis.status === '分析中' ? '正在计算候选着法…' : '暂无合法候选着法'; rows.append(empty); }
+      section.append(rows);
+    }
+    container.append(section);
   }
-  for (const line of lines) {
-    const moveText = line.pv?.[0];
-    let move;
-    try { const iccs = engineMoveToICCS(moveText); move = { from: fromICCS(iccs.slice(0, 2)), to: fromICCS(iccs.slice(2, 4)) }; } catch { move = null; }
-    if (!move || !legalMoves(state.board, state.side).some((candidate) => sameMove(candidate, move))) continue;
-    const row = document.createElement('button'); row.type = 'button'; row.className = 'engine-line';
-    const notation = document.createElement('strong');
-    notation.textContent = chineseNotation(state.board, move, state.side);
-    const score = document.createElement('span');
-    score.textContent = line.score ? (line.score.type === 'mate' ? `杀棋 ${line.score.value}` : `${(line.score.value / 100).toFixed(2)} 分`) : '评估中';
-    const depth = document.createElement('small'); depth.textContent = `深度 ${line.depth}`;
-    row.append(notation, score, depth);
-    row.addEventListener('click', async () => {
-      if (state.gameOver || state.aiBusy || !legalMoves(state.board, state.side).some((candidate) => sameMove(candidate, move))) return;
-      await playMove(move);
-    });
-    container.append(row);
+}
+
+async function requestPikafishAnalysis({ multiPv = 3 } = {}) {
+  if (!state.pikafish?.ready || state.gameOver) return null;
+  const board = [...state.board]; const side = state.side; const position = positionKey(board, side);
+  const previousTarget = state.engineAnalysisTarget;
+  if (previousTarget) {
+    const previous = state.engineAnalyses[previousTarget.side];
+    if (previous?.analysisId === previousTarget.analysisId && previous.status === '分析中') {
+      previous.status = '局面更新，保留已得结果';
+    }
+  }
+  const task = state.pikafish.analyze(board, side, { depth: Number($('#pikafish-depth').value), multiPv });
+  const analysisId = task.analysisId;
+  const analysis = { analysisId, board, side, position, ply: state.history.length, lines: [], status: '分析中' };
+  state.engineAnalyses[side] = analysis;
+  state.engineAnalysisTarget = { analysisId, side };
+  state.engineAnalysisTask = task;
+  renderEngineLines();
+  const analyzeButton = $('#pikafish-analyze');
+  if (analyzeButton) { analyzeButton.disabled = true; analyzeButton.textContent = '分析中…'; }
+  $('#pikafish-status').textContent = `自动分析 · ${names[side]}行棋`;
+  try {
+    const bestmove = await task;
+    if (state.engineAnalyses[side]?.analysisId === analysisId && analysis.status === '分析中') analysis.status = '分析完成';
+    if (state.engineAnalysisTask === task) $('#pikafish-status').textContent = `分析完成 · ${names[side]}行棋`;
+    return bestmove;
+  } catch (error) {
+    if (state.engineAnalyses[side]?.analysisId === analysisId && analysis.status === '分析中') analysis.status = error.name === 'AbortError' ? '已停止' : `分析失败：${error.message}`;
+    if (state.engineAnalysisTask === task && error.name !== 'AbortError') $('#pikafish-status').textContent = `分析中断：${error.message}`;
+    return null;
+  } finally {
+    if (state.engineAnalysisTask === task) {
+      state.engineAnalysisTask = null;
+      const button = $('#pikafish-analyze');
+      if (button) { button.disabled = !state.pikafish?.ready; button.textContent = '重新分析'; }
+      renderEngineLines();
+    }
   }
 }
 
@@ -638,7 +704,10 @@ async function startPikafish() {
     if (message.type === 'progress') {
       status.textContent = message.total ? `下载 NNUE ${Math.round(message.loaded / message.total * 100)}%` : `下载 NNUE ${(message.loaded / 1048576).toFixed(1)} MiB`;
     } else if (message.type === 'status') status.textContent = message.text;
-    else if (message.type === 'analysis') { state.engineLines = message.lines; renderEngineLines(); }
+    else if (message.type === 'analysis') {
+      const analysis = state.engineAnalyses[message.side];
+      if (analysis?.analysisId === message.analysisId) { analysis.lines = message.lines; renderEngineLines(); }
+    }
   });
   try {
     await engine.start();
@@ -646,6 +715,7 @@ async function startPikafish() {
     status.textContent = '已就绪 · Pikafish WebAssembly';
     $('#pikafish-analyze').disabled = false;
     button.textContent = '引擎已加载';
+    void requestPikafishAnalysis();
   } catch (error) {
     engine.close(); button.disabled = false; button.textContent = '重试加载';
     status.textContent = `加载失败：${error.message}`;
@@ -655,14 +725,7 @@ async function startPikafish() {
 
 async function analyzePikafish() {
   if (!state.pikafish || state.gameOver) return;
-  const button = $('#pikafish-analyze'); button.disabled = true; button.textContent = '分析中…';
-  $('#pikafish-status').textContent = `分析局面 · ${names[state.side]}行棋`;
-  try {
-    await state.pikafish.analyze(state.board, state.side, { depth: Number($('#pikafish-depth').value), multiPv: 3 });
-    $('#pikafish-status').textContent = '分析完成';
-  } catch (error) {
-    $('#pikafish-status').textContent = `分析中断：${error.message}`;
-  } finally { button.disabled = false; button.textContent = '重新分析'; }
+  await requestPikafishAnalysis();
 }
 
 function setView(view) {
@@ -696,15 +759,17 @@ function bindEvents() {
   $('#play-flip').addEventListener('click', () => { state.playFlipped = !state.playFlipped; renderPlayBoard(); });
   $('#undo-button').addEventListener('click', undoMove);
   $('#restart-button').addEventListener('click', () => {
-    state.board = initialBoard(); state.side = RED; state.history = []; state.gameOver = false; state.adjudication = null; state.selectedSquare = null; renderPlayBoard(); saveGame();
+    resetEngineAnalyses(); state.board = initialBoard(); state.side = RED; state.history = []; state.gameOver = false; state.adjudication = null; state.selectedSquare = null; renderPlayBoard(); saveGame();
     if ($('#mode-select').value === 'ai' && $('#side-select').value === 'black') scheduleAiMove();
+    else if (state.pikafish?.ready) void requestPikafishAnalysis();
   });
-  $('#mode-select').addEventListener('change', () => { state.board = initialBoard(); state.side = RED; state.history = []; state.gameOver = false; state.adjudication = null; renderPlayBoard(); saveGame(); if ($('#mode-select').value === 'ai' && $('#side-select').value === 'black') scheduleAiMove(); });
+  $('#mode-select').addEventListener('change', () => { resetEngineAnalyses(); state.board = initialBoard(); state.side = RED; state.history = []; state.gameOver = false; state.adjudication = null; renderPlayBoard(); saveGame(); if ($('#mode-select').value === 'ai' && $('#side-select').value === 'black') scheduleAiMove(); else if (state.pikafish?.ready) void requestPikafishAnalysis(); });
   $('#strength-select').addEventListener('change', saveGame);
-  $('#side-select').addEventListener('change', () => { if ($('#mode-select').value === 'ai') { state.board = initialBoard(); state.side = RED; state.history = []; state.gameOver = false; state.adjudication = null; renderPlayBoard(); saveGame(); if ($('#side-select').value === 'black') scheduleAiMove(); } });
+  $('#side-select').addEventListener('change', () => { if ($('#mode-select').value === 'ai') { resetEngineAnalyses(); state.board = initialBoard(); state.side = RED; state.history = []; state.gameOver = false; state.adjudication = null; renderPlayBoard(); saveGame(); if ($('#side-select').value === 'black') scheduleAiMove(); else if (state.pikafish?.ready) void requestPikafishAnalysis(); } });
   $('#suggest-button').addEventListener('click', requestAdvice);
   $('#pikafish-start').addEventListener('click', startPikafish);
   $('#pikafish-analyze').addEventListener('click', analyzePikafish);
+  $('#pikafish-depth').addEventListener('change', () => { if (state.pikafish?.ready) void requestPikafishAnalysis(); });
   $('#settings-button').addEventListener('click', openSettings);
   $('#clear-key').addEventListener('click', async () => { state.settings = { ...state.settings, apiKey: '' }; await saveSettings(state.settings); $('#api-key').value = ''; toast('本机 API 密钥已清除'); });
   $('#clear-data').addEventListener('click', async () => {

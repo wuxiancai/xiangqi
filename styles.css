@@ -144,9 +144,10 @@ button:active,.import-button:active{transform:translateY(1px)}
 .engine-badge{border:1px solid #c7dacd;border-radius:99px;background:#e8f2e9;color:#28644e;padding:4px 8px;font-size:9px;font-weight:700;letter-spacing:.08em}
 .engine-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:15px}
 .engine-actions button{min-height:42px;padding:0 10px;border-radius:9px;font-size:12px}
-.engine-lines{display:grid;gap:6px;margin-top:12px}
+.engine-lines{display:grid;gap:11px;margin-top:12px}.engine-side-analysis+.engine-side-analysis{padding-top:10px;border-top:1px solid #e3e9e2}.engine-side-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:5px}.engine-side-heading strong{font-size:11px}.engine-side-heading small,.engine-side-status{font-size:9px;color:#849087}.engine-side-analysis.red .engine-side-heading strong{color:#a64031}.engine-side-analysis.black .engine-side-heading strong{color:#39433d}.engine-side-status{margin:0 0 5px}.engine-side-lines{display:grid;gap:5px}
 .engine-line{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:9px;width:100%;min-height:40px;padding:7px 10px;text-align:left;background:#fff;border:1px solid #e6ece5;border-radius:8px;color:#34453a}
 .engine-line:hover{border-color:#9fbea7;background:#f7fbf7}
+.engine-line.historical{background:#f7f7f3;cursor:default;opacity:.82}
 .engine-line strong{font-size:12px}.engine-line span,.engine-line small{font-size:10px;color:#758078}.engine-line small{white-space:nowrap}
 .engine-footnote{margin:11px 0 0;color:#8a938b;font-size:10px;line-height:1.6}
 .engine-depth{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:12px;margin-top:11px;color:#68766d;font-size:11px}
