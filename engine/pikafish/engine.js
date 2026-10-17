@@ -76,13 +76,13 @@ export class PikafishEngine {
   #line(line) {
     if (line.startsWith('info ')) {
       const depth = Number(line.match(/\bdepth (\d+)/)?.[1] ?? 0);
+      const multipv = Number(line.match(/\bmultipv (\d+)/)?.[1] ?? 1);
       const score = line.match(/\bscore (cp|mate) (-?\d+)/);
       const pv = line.match(/\bpv (.+)$/)?.[1]?.split(/\s+/) ?? [];
       if (pv.length && this.pending) {
-        const item = { depth, score: score ? { type: score[1], value: Number(score[2]) } : null, pv };
-        const key = pv[0];
-        this.pending.lines.set(key, item);
-        this.onUpdate({ type: 'analysis', analysisId: this.pending.id, board: this.pending.board, side: this.pending.side, lines: [...this.pending.lines.values()].sort((a, b) => b.depth - a.depth).slice(0, 5) });
+        const item = { multipv, depth, score: score ? { type: score[1], value: Number(score[2]) } : null, pv };
+        this.pending.lines.set(multipv, item);
+        this.onUpdate({ type: 'analysis', analysisId: this.pending.id, board: this.pending.board, side: this.pending.side, lines: [...this.pending.lines.values()].sort((a, b) => a.multipv - b.multipv) });
       }
       return;
     }

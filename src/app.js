@@ -7,7 +7,7 @@ import { playCheckSound, playMoveSound } from './audio.js?v=check-sound-1';
 import { convertTextToRecord, extractText, findExistingImportedRecord, importXqfFolderFiles, MAX_IMPORT_SIZE } from './importer.js';
 import { parseXqf, xqfMovesAsText } from './xqf.js';
 import { cblMovesAsText, parseCbl } from './cbl.js';
-import { engineMoveToICCS, PikafishEngine } from '../engine/pikafish/engine.js?v=auto-analysis-2';
+import { engineMoveToICCS, PikafishEngine } from '../engine/pikafish/engine.js?v=multipv-order-1';
 
 const categories = ['古谱', '现代对局', '开局', '残局'];
 const labels = { K: '帥', A: '仕', E: '相', R: '車', H: '馬', C: '炮', P: '兵', k: '將', a: '士', e: '象', r: '車', h: '馬', c: '炮', p: '卒' };
@@ -49,7 +49,7 @@ function renderBoard(svg, board, flipped, onSquare, selected = null, hints = [],
   svg.replaceChildren();
   const prefix = svg.id;
   const defs = svgElement('defs');
-  defs.innerHTML = `<linearGradient id="${prefix}-wood" x2="0" y2="1"><stop stop-color="#dbb77c"/><stop offset=".48" stop-color="#cba36a"/><stop offset="1" stop-color="#d9b77f"/></linearGradient><radialGradient id="${prefix}-red-face" cx="30%" cy="17%" r="86%"><stop stop-color="#fffdf4"/><stop offset=".48" stop-color="#f8e8ca"/><stop offset=".78" stop-color="#d9ae70"/><stop offset="1" stop-color="#a66d37"/></radialGradient><radialGradient id="${prefix}-black-face" cx="30%" cy="17%" r="86%"><stop stop-color="#fffdf4"/><stop offset=".48" stop-color="#f8e8ca"/><stop offset=".78" stop-color="#d9ae70"/><stop offset="1" stop-color="#a66d37"/></radialGradient><linearGradient id="${prefix}-gold-rim" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff9dc"/><stop offset=".22" stop-color="#f4d995"/><stop offset=".48" stop-color="#c18b49"/><stop offset=".68" stop-color="#fff0c0"/><stop offset=".88" stop-color="#9a632f"/><stop offset="1" stop-color="#f1d08a"/></linearGradient><linearGradient id="${prefix}-piece-side" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#e7c580"/><stop offset=".34" stop-color="#b47a3d"/><stop offset="1" stop-color="#714522"/></linearGradient><filter id="${prefix}-piece-shadow" x="-50%" y="-50%" width="210%" height="230%"><feGaussianBlur in="SourceAlpha" stdDeviation="3.5"/><feOffset dy="4"/><feComponentTransfer><feFuncA type="linear" slope=".48"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter><filter id="${prefix}-threat-glow" x="-70%" y="-70%" width="240%" height="240%"><feGaussianBlur stdDeviation="2.6" result="blur"/><feFlood flood-color="#e34b35" flood-opacity=".78"/><feComposite in2="blur" operator="in"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter><marker id="${prefix}-analysis-arrow-red" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto" markerUnits="strokeWidth"><path d="M 0 0 L 8 4 L 0 8 z" fill="#a62f24" stroke="#fffdf5" stroke-width=".7"/></marker><marker id="${prefix}-analysis-arrow-black" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto" markerUnits="strokeWidth"><path d="M 0 0 L 8 4 L 0 8 z" fill="#3983b5" stroke="#fffdf5" stroke-width=".7"/></marker>`;
+  defs.innerHTML = `<linearGradient id="${prefix}-wood" x2="0" y2="1"><stop stop-color="#dbb77c"/><stop offset=".48" stop-color="#cba36a"/><stop offset="1" stop-color="#d9b77f"/></linearGradient><radialGradient id="${prefix}-red-face" cx="30%" cy="17%" r="86%"><stop stop-color="#fffdf4"/><stop offset=".48" stop-color="#f8e8ca"/><stop offset=".78" stop-color="#d9ae70"/><stop offset="1" stop-color="#a66d37"/></radialGradient><radialGradient id="${prefix}-black-face" cx="30%" cy="17%" r="86%"><stop stop-color="#fffdf4"/><stop offset=".48" stop-color="#f8e8ca"/><stop offset=".78" stop-color="#d9ae70"/><stop offset="1" stop-color="#a66d37"/></radialGradient><linearGradient id="${prefix}-gold-rim" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff9dc"/><stop offset=".22" stop-color="#f4d995"/><stop offset=".48" stop-color="#c18b49"/><stop offset=".68" stop-color="#fff0c0"/><stop offset=".88" stop-color="#9a632f"/><stop offset="1" stop-color="#f1d08a"/></linearGradient><linearGradient id="${prefix}-piece-side" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#e7c580"/><stop offset=".34" stop-color="#b47a3d"/><stop offset="1" stop-color="#714522"/></linearGradient><filter id="${prefix}-piece-shadow" x="-50%" y="-50%" width="210%" height="230%"><feGaussianBlur in="SourceAlpha" stdDeviation="3.5"/><feOffset dy="4"/><feComponentTransfer><feFuncA type="linear" slope=".48"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter><filter id="${prefix}-threat-glow" x="-70%" y="-70%" width="240%" height="240%"><feGaussianBlur stdDeviation="2.6" result="blur"/><feFlood flood-color="#e34b35" flood-opacity=".78"/><feComposite in2="blur" operator="in"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter><marker id="${prefix}-analysis-arrow-red" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M 0 0 L 6 3 L 0 6 z" fill="#a62f24"/></marker><marker id="${prefix}-analysis-arrow-black" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M 0 0 L 6 3 L 0 6 z" fill="#3983b5"/></marker>`;
   svg.append(defs);
   svg.append(svgElement('rect', { x: 0, y: 0, width: 500, height: 550, rx: 8, class: 'board-background', fill: `url(#${prefix}-wood)` }));
   const lines = svgElement('g', { class: 'board-lines' });
@@ -120,10 +120,14 @@ function renderBoard(svg, board, flipped, onSquare, selected = null, hints = [],
     const start = point(from.file, from.rank); const end = point(to.file, to.rank);
     const group = svgElement('g', { class: `analysis-arrow ${move.side} rank-${index + 1}`, role: 'button', tabindex: '0', 'aria-label': `分析着法 ${move.notation}，点击行棋` });
     group.dataset.analysisMove = `${move.from}:${move.to}`;
-    group.append(svgElement('rect', { x: start.x - 24, y: start.y - 24, width: 48, height: 48, class: 'analysis-square origin' }));
-    group.append(svgElement('line', { x1: start.x, y1: start.y, x2: end.x, y2: end.y, class: 'arrow-hit' }));
-    group.append(svgElement('line', { x1: start.x, y1: start.y, x2: end.x, y2: end.y, class: 'arrow-visible', 'marker-end': `url(#${prefix}-analysis-arrow-${move.side})` }));
-    group.append(svgElement('rect', { x: end.x - 24, y: end.y - 24, width: 48, height: 48, class: 'analysis-square destination' }));
+    const dx = end.x - start.x; const dy = end.y - start.y; const length = Math.hypot(dx, dy) || 1;
+    const ux = dx / length; const uy = dy / length; const px = -uy * 9; const py = ux * 9;
+    const x1 = start.x + ux * 10 + px; const y1 = start.y + uy * 10 + py;
+    const x2 = end.x - ux * 8 + px; const y2 = end.y - uy * 8 + py;
+    const cx = (x1 + x2) / 2 + px * .35; const cy = (y1 + y2) / 2 + py * .35;
+    const path = `M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}`;
+    group.append(svgElement('path', { d: path, class: 'arrow-hit' }));
+    group.append(svgElement('path', { d: path, class: 'arrow-visible', 'marker-end': `url(#${prefix}-analysis-arrow-${move.side})` }));
     svg.append(group);
   }
   const activate = (target) => {
@@ -488,14 +492,7 @@ function renderPlayBoard() {
   const last = state.history.at(-1)?.move ?? null;
   const status = gameStatus(state.board, state.side);
   const analysis = state.engineAnalyses[state.side];
-  const arrows = analysis?.position === positionKey(state.board, state.side) ? analysis.lines.flatMap((line) => {
-    try {
-      const iccs = engineMoveToICCS(line.pv?.[0]);
-      const move = { from: fromICCS(iccs.slice(0, 2)), to: fromICCS(iccs.slice(2, 4)), side: state.side };
-      if (!legalMoves(state.board, state.side).some((candidate) => sameMove(candidate, move))) return [];
-      return [{ ...move, notation: chineseNotation(state.board, move, state.side) }];
-    } catch { return []; }
-  }).slice(0, 3) : [];
+  const arrows = analysis?.position === positionKey(state.board, state.side) ? engineCandidateMoves(analysis.lines, analysis.board, analysis.side ?? state.side).slice(0, 1).map(({ move, notation }) => ({ ...move, side: state.side, notation })) : [];
   renderBoard($('#play-board'), state.board, state.playFlipped, onPlaySquare, state.selectedSquare ?? null, state.selectedSquare == null ? [] : legalMoves(state.board, state.side).filter((move) => move.from === state.selectedSquare), last, pieceThreatStatus(state.board), arrows, (move) => {
     if (state.gameOver || state.aiBusy || !arrows.some((arrow) => sameMove(arrow, move))) return;
     void playMove(move);
@@ -513,6 +510,20 @@ function renderPlayBoard() {
 }
 
 function positionKey(board, side) { return `${board.join('')}:${side}`; }
+
+function engineCandidateMoves(lines, board, side) {
+  const legal = legalMoves(board, side);
+  const candidates = [];
+  for (const line of lines) {
+    try {
+      const iccs = engineMoveToICCS(line.pv?.[0]);
+      const move = { from: fromICCS(iccs.slice(0, 2)), to: fromICCS(iccs.slice(2, 4)) };
+      if (!legal.some((candidate) => sameMove(candidate, move)) || candidates.some((candidate) => sameMove(candidate.move, move))) continue;
+      candidates.push({ line, move, notation: chineseNotation(board, move, side) });
+    } catch { /* Ignore malformed UCI lines; they must never be shown as legal moves. */ }
+  }
+  return candidates;
+}
 
 function renderHistory() {
   const container = $('#play-history'); container.replaceChildren();
@@ -641,7 +652,7 @@ function installEnginePanel() {
   const panel = document.createElement('section');
   panel.id = 'pikafish-panel';
   panel.className = 'panel engine-panel';
-  panel.innerHTML = `<div class="panel-title"><div><h2>Pikafish 引擎</h2><span id="pikafish-status" class="muted" role="status">未加载 · 本地运行</span></div><span class="engine-badge">WASM</span></div><div class="engine-actions"><button id="pikafish-start" class="secondary-button">加载引擎</button><button id="pikafish-analyze" class="primary-button" disabled>分析局面</button></div><label class="engine-depth">搜索深度<select id="pikafish-depth"><option value="12">快速 · 12 层</option><option value="16" selected>标准 · 16 层</option><option value="20">深入 · 20 层</option></select></label><div id="pikafish-lines" class="engine-lines"></div><p class="engine-footnote">引擎就绪后会在每步落子后自动分析红黑双方各自回合的局面；首次加载需下载 NNUE 网络。</p>`;
+  panel.innerHTML = `<div class="panel-title"><div><h2>Pikafish 引擎</h2><span id="pikafish-status" class="muted" role="status">未加载 · 本地运行</span></div><span class="engine-badge">WASM</span></div><div class="engine-toolbar"><button id="pikafish-start" class="secondary-button">加载引擎</button><button id="pikafish-analyze" class="primary-button" disabled>分析局面</button><label class="engine-depth"><span>深度</span><select id="pikafish-depth" aria-label="搜索深度"><option value="12">快速 · 12 层</option><option value="16" selected>标准 · 16 层</option><option value="20">深入 · 20 层</option></select></label></div><div id="pikafish-lines" class="engine-lines"></div><p class="engine-footnote">引擎就绪后会在每步落子后自动分析红黑双方各自回合的局面；首次加载需下载 NNUE 网络。</p>`;
   $('.game-sidebar').insertBefore(panel, $('.history-panel'));
   renderEngineLines();
 }
@@ -661,26 +672,28 @@ function renderEngineLines() {
     if (analysis) {
       const status = document.createElement('p'); status.className = 'engine-side-status'; status.textContent = analysis.status; section.append(status);
       const rows = document.createElement('div'); rows.className = 'engine-side-lines';
-      for (const line of analysis.lines) {
-        const moveText = line.pv?.[0];
-        let move;
-        try { const iccs = engineMoveToICCS(moveText); move = { from: fromICCS(iccs.slice(0, 2)), to: fromICCS(iccs.slice(2, 4)) }; } catch { move = null; }
-        if (!move || !legalMoves(analysis.board, side).some((candidate) => sameMove(candidate, move))) continue;
+      const analysisSide = analysis.side ?? side;
+      for (const { line, move, notation: moveNotation } of engineCandidateMoves(analysis.lines, analysis.board, analysisSide)) {
         const row = document.createElement(current ? 'button' : 'div');
         if (current) row.type = 'button';
         row.className = `engine-line${current ? '' : ' historical'}`;
-        const notation = document.createElement('strong'); notation.textContent = chineseNotation(analysis.board, move, side);
+        const notation = document.createElement('strong'); notation.textContent = moveNotation;
         const score = document.createElement('span');
         score.textContent = line.score ? (line.score.type === 'mate' ? `杀棋 ${line.score.value}` : `${(line.score.value / 100).toFixed(2)} 分`) : '评估中';
         const depth = document.createElement('small'); depth.textContent = `深度 ${line.depth}`;
         row.append(notation, score, depth);
         if (current) row.addEventListener('click', async () => {
-          if (state.gameOver || state.aiBusy || analysis.position !== positionKey(state.board, state.side) || !legalMoves(state.board, state.side).some((candidate) => sameMove(candidate, move))) return;
+          if (state.gameOver || state.aiBusy || analysis.position !== positionKey(state.board, state.side) || !legalMoves(state.board, analysisSide).some((candidate) => sameMove(candidate, move))) return;
           await playMove(move);
         });
         rows.append(row);
       }
-      if (!rows.children.length) { const empty = document.createElement('p'); empty.className = 'move-empty'; empty.textContent = analysis.status === '分析中' ? '正在计算候选着法…' : '暂无合法候选着法'; rows.append(empty); }
+      if (!rows.children.length) {
+        const empty = document.createElement('p'); empty.className = 'move-empty';
+        const positionMoves = legalMoves(analysis.board, analysisSide);
+        empty.textContent = analysis.status === '分析中' ? '正在计算候选着法…' : positionMoves.length ? '暂无有效引擎候选着法（局面仍有合法着法）' : '该局面确实没有合法着法';
+        rows.append(empty);
+      }
       section.append(rows);
     }
     container.append(section);
@@ -697,9 +710,10 @@ async function requestPikafishAnalysis({ multiPv = 3 } = {}) {
       previous.status = '局面更新，保留已得结果';
     }
   }
-  const task = state.pikafish.analyze(board, side, { depth: Number($('#pikafish-depth').value), multiPv });
+  const depth = Number($('#pikafish-depth').value);
+  const task = state.pikafish.analyze(board, side, { depth, multiPv });
   const analysisId = task.analysisId;
-  const analysis = { analysisId, board, side, position, ply: state.history.length, lines: [], status: '分析中' };
+  const analysis = { analysisId, board, side, position, ply: state.history.length, depth, lines: [], status: '分析中' };
   state.engineAnalyses[side] = analysis;
   state.engineAnalysisTarget = { analysisId, side };
   state.engineAnalysisTask = task;
@@ -709,6 +723,10 @@ async function requestPikafishAnalysis({ multiPv = 3 } = {}) {
   $('#pikafish-status').textContent = `自动分析 · ${names[side]}行棋`;
   try {
     const bestmove = await task;
+    if (state.engineAnalyses[side]?.analysisId === analysisId && bestmove && bestmove !== '(none)' && !engineCandidateMoves(analysis.lines, board, side).length) {
+      const fallback = { multipv: 1, depth, score: null, pv: [bestmove] };
+      if (engineCandidateMoves([fallback], board, side).length) analysis.lines = [fallback];
+    }
     if (state.engineAnalyses[side]?.analysisId === analysisId && analysis.status === '分析中') analysis.status = '分析完成';
     if (state.engineAnalysisTask === task) $('#pikafish-status').textContent = `分析完成 · ${names[side]}行棋`;
     return bestmove;
@@ -721,7 +739,7 @@ async function requestPikafishAnalysis({ multiPv = 3 } = {}) {
       state.engineAnalysisTask = null;
       const button = $('#pikafish-analyze');
       if (button) { button.disabled = !state.pikafish?.ready; button.textContent = '重新分析'; }
-      renderEngineLines();
+      renderPlayBoard();
     }
   }
 }
