@@ -49,6 +49,7 @@
 .threat-key.red{border-color:#e33e35;background:#ed443d38;box-shadow:0 0 5px #ee413d55}
 .threat-key.green{border-color:#258552;background:#4dba7b38;box-shadow:0 0 5px #2e9a6255}
 .threat-ring,.selected-piece-ring,.last-move-origin-ring,.last-move-origin,.last-move-destination{transform-box:fill-box;transform-origin:center;animation:chess-ring-spin 16.8s linear infinite;pointer-events:none}
+.threat-ring.protected{animation:none}
 .selected-piece-ring{fill:none;stroke:#40805d;stroke-width:1.8;stroke-dasharray:11 6}
 .last-move-origin-ring{fill:none;stroke:#fff;stroke-width:1.6;stroke-dasharray:5 3;opacity:.92;filter:drop-shadow(0 0 1.2px #fff)}
 .last-move-origin{fill:none;stroke:#fff;stroke-width:1.8;stroke-dasharray:3 2;filter:drop-shadow(0 0 1.2px #fff)}

@@ -41,5 +41,6 @@ test('piece status rings rotate without intercepting input and respect reduced m
   assert.match(css, /\.threat-ring,\.selected-piece-ring,\.last-move-origin-ring,\.last-move-origin,\.last-move-destination\{[^}]*animation:chess-ring-spin 16\.8s linear infinite/);
   assert.match(css, /@keyframes chess-ring-spin\{to\{transform:rotate\(360deg\)\}\}/);
   assert.match(css, /@media\(prefers-reduced-motion:reduce\)[^{]*\{[^}]*animation:none/);
+  assert.match(css, /\.threat-ring\.protected\{animation:none\}/);
   assert.match(app, /class: 'selected-piece-ring'/);
 });
