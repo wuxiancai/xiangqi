@@ -819,7 +819,7 @@ async function initialize() {
     const savedGame = await recordRepository.getState('active-game');
     if (savedGame?.board?.length === 90 && Array.isArray(savedGame.history)) {
       state.board = savedGame.board; state.side = savedGame.side; state.history = savedGame.history; state.gameOver = savedGame.gameOver; state.adjudication = savedGame.adjudication ?? null;
-      $('#mode-select').value = savedGame.mode ?? 'local'; $('#side-select').value = savedGame.userSide ?? 'red'; $('#strength-select').value = savedGame.strength ?? 'max';
+      $('#mode-select').value = savedGame.mode ?? 'ai'; $('#side-select').value = savedGame.userSide ?? 'red'; $('#strength-select').value = savedGame.strength ?? 'max';
     }
   } catch { $('#storage-status').textContent = '本地存储不可用'; }
   await refreshRecords();

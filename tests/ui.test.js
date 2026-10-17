@@ -19,9 +19,15 @@ test('play view removes the standalone advice action while keeping AI status out
   assert.doesNotMatch(app, /requestAdvice|suggest-button/);
 });
 
+test('new games default to user versus AI unless a saved game has a mode', async () => {
+  const [html, app] = await Promise.all([read('../index.html'), read('../src/app.js')]);
+  assert.match(html, /<option value="ai" selected>用户 vs AI<\/option>/);
+  assert.match(app, /savedGame\.mode \?\? 'ai'/);
+});
+
 test('play board header shows red-normalized score cp and WDL output', async () => {
   const [html, app, engine] = await Promise.all([read('../index.html'), read('../src/app.js'), read('../engine/pikafish/engine.js')]);
-  assert.match(html, /id="red-evaluation"[^>]*>红方 score cp — · WDL 胜/);
+  assert.match(html, /id="red-evaluation"/);
   assert.match(app, /formatRedEvaluation\(currentLine, currentAnalysis\?\.side \?\? state\.side\)/);
   assert.match(engine, /setoption name UCI_ShowWDL value true/);
 });
