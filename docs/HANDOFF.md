@@ -186,3 +186,10 @@
 - 按截图将分析箭头起点设为源棋子的交叉点中心，箭头尖端对齐目标交叉点；SVG marker 的尖端锚点同步改为箭头末端。箭头仍保持 `pointer-events: none`，行棋交互不变。
 - Service Worker 缓存版本更新至 v50。在隔离浏览器载入本机 Pikafish WASM 后目视确认：炮的分析箭头从炮心连到目标交叉点中心；当前行棋局面与箭头同步。
 - `node --check src/app.js`、`git diff --check` 通过；未运行测试套件。
+
+# 2026-10-17 修复非对称局面 Pikafish 无有效候选
+
+- 截图中的“暂无有效引擎候选着法（局面仍有合法着法）”由 FEN 转换错误引起：此前生成 FEN 时同时倒置了行方向和红黑棋子的大小写。开局布局具有对称性，错误可能被遮掩；行棋后布局不再对称，引擎 PV 转回应用坐标后就会变成不合法着法，因而候选全部被过滤。
+- 修正 FEN 以应用 rank 0 到 rank 9 顺序编码，并保留红方大写、黑方小写；更新引擎模块 URL 和 Service Worker 壳缓存至 v51，确保旧模块不会继续生效。
+- 新增回归测试复现截图对应的六步局面并断言标准 FEN。隔离浏览器加载本机 Pikafish WASM 后，同一局面返回的 `i9i8`、`b9c7`、`a9a8` 均通过本地合法着法校验（局面共有 30 个合法着法）。
+- `npm test` 39 项通过；`node --check src/app.js`、`node --check src/service-worker.js`、`node --check engine/pikafish/engine.js` 与 `git diff --check` 通过。

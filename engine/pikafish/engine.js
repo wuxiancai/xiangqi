@@ -2,7 +2,9 @@ const pieceMap = { K: 'K', A: 'A', E: 'B', R: 'R', H: 'N', C: 'C', P: 'P' };
 
 export function boardToFen(board, side) {
   const rows = [];
-  for (let rank = 9; rank >= 0; rank -= 1) {
+  // FEN rows run from the black side (app rank 0) toward the red side (rank 9).
+  // Keep piece casing too: uppercase pieces are red in the app and in Pikafish FEN.
+  for (let rank = 0; rank < 10; rank += 1) {
     let row = '';
     let empty = 0;
     for (let file = 0; file < 9; file += 1) {
@@ -11,7 +13,7 @@ export function boardToFen(board, side) {
       if (empty) { row += empty; empty = 0; }
       const fenPiece = pieceMap[piece.toUpperCase()];
       if (!fenPiece) throw new Error(`无法转换棋子：${piece}`);
-      row += piece === piece.toUpperCase() ? fenPiece.toLowerCase() : fenPiece;
+      row += piece === piece.toUpperCase() ? fenPiece : fenPiece.toLowerCase();
     }
     if (empty) row += empty;
     rows.push(row);

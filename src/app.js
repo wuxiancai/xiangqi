@@ -7,7 +7,7 @@ import { playCheckSound, playMoveSound } from './audio.js?v=check-sound-1';
 import { convertTextToRecord, extractText, findExistingImportedRecord, importXqfFolderFiles, MAX_IMPORT_SIZE } from './importer.js';
 import { parseXqf, xqfMovesAsText } from './xqf.js';
 import { cblMovesAsText, parseCbl } from './cbl.js';
-import { engineMoveToICCS, PikafishEngine } from '../engine/pikafish/engine.js?v=arrow-overlay-1';
+import { engineMoveToICCS, PikafishEngine } from '../engine/pikafish/engine.js?v=fen-orientation-1';
 
 const categories = ['古谱', '现代对局', '开局', '残局'];
 const labels = { K: '帥', A: '仕', E: '相', R: '車', H: '馬', C: '炮', P: '兵', k: '將', a: '士', e: '象', r: '車', h: '馬', c: '炮', p: '卒' };
