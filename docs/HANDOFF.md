@@ -193,3 +193,10 @@
 - 修正 FEN 以应用 rank 0 到 rank 9 顺序编码，并保留红方大写、黑方小写；更新引擎模块 URL 和 Service Worker 壳缓存至 v51，确保旧模块不会继续生效。
 - 新增回归测试复现截图对应的六步局面并断言标准 FEN。隔离浏览器加载本机 Pikafish WASM 后，同一局面返回的 `i9i8`、`b9c7`、`a9a8` 均通过本地合法着法校验（局面共有 30 个合法着法）。
 - `npm test` 39 项通过；`node --check src/app.js`、`node --check src/service-worker.js`、`node --check engine/pikafish/engine.js` 与 `git diff --check` 通过。
+
+# 2026-10-17 对弈侧栏、阵营音效与复盘箭头
+
+- 对弈侧栏排序调整为“本局棋谱 → 对弈设置 → Pikafish 引擎”；移除棋盘下的“局势建议”按钮及其单独分析流程，`ai-output` 保留为 AI 对弈状态提示。
+- 红黑双方普通落子与吃子均有不同音色/节奏；对局和棋谱逐步播放都使用本次着法对应阵营的音色，棋谱局面如指定黑方先行也能正确判定阵营。
+- 棋谱复盘复用对弈棋盘同款箭头，在当前回放着法的起点和目标之间绘制、翻转棋盘时同步变换，箭头仍不拦截棋盘交互。Service Worker 缓存升至 v52。
+- `tests/audio.test.js` 验证普通着法及吃子红黑音效不同；新增 `tests/ui.test.js` 覆盖侧栏顺序、建议入口移除及复盘着法传入共享箭头渲染器。`npm test` 44 项通过；`node --check` 与 `git diff --check` 通过。隔离浏览器确认侧栏顺序和建议入口，但演示棋谱选择未触发，复盘箭头未做完整浏览器交互验收。

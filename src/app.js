@@ -129,9 +129,11 @@ function renderBoard(svg, board, flipped, onSquare, selected = null, hints = [],
 function renderStudyBoard() {
   const board = state.currentRecord?.positions[state.studyPly] ?? initialBoard();
   const previous = state.studyPly ? state.currentRecord.moves[state.studyPly - 1] : null;
-  renderBoard($('#study-board'), board, state.studyFlipped, () => {}, null, [], previous);
   const record = state.currentRecord;
   const initialSide = record?.initialSide ?? RED;
+  const previousSide = previous ? (state.studyPly % 2 === 1 ? initialSide : otherSide(initialSide)) : null;
+  const arrows = previous ? [{ ...previous, side: previousSide }] : [];
+  renderBoard($('#study-board'), board, state.studyFlipped, () => {}, null, [], previous, new Map(), arrows);
   const nextSide = state.studyPly % 2 ? otherSide(initialSide) : initialSide;
   $('#study-status').textContent = record ? `${record.title} · ${state.studyPly ? names[nextSide] + '行棋' : '开局'}` : '选择一盘棋谱开始';
   renderMoveList();
@@ -280,8 +282,10 @@ function stepStudy(delta) {
   const nextPly = Math.max(0, Math.min(state.currentRecord.moves.length, state.studyPly + delta));
   if (delta > 0 && nextPly > state.studyPly) {
     const move = state.currentRecord.moves[nextPly - 1];
-    playMoveSound(moveAudio, Boolean(state.currentRecord.positions[state.studyPly][move.to]));
-    const nextSide = nextPly % 2 === 1 ? BLACK : RED;
+    const initialSide = state.currentRecord.initialSide ?? RED;
+    const moveSide = nextPly % 2 === 1 ? initialSide : otherSide(initialSide);
+    playMoveSound(moveAudio, Boolean(state.currentRecord.positions[state.studyPly][move.to]), moveSide);
+    const nextSide = otherSide(moveSide);
     if (isInCheck(state.currentRecord.positions[nextPly], nextSide)) playCheckSound(moveAudio);
   }
   state.studyPly = nextPly;
@@ -534,7 +538,7 @@ async function onPlaySquare(square) {
 
 async function playMove(move) {
   const captured = state.board[move.to];
-  playMoveSound(moveAudio, Boolean(captured));
+  playMoveSound(moveAudio, Boolean(captured), state.side);
   const previousBoard = state.board;
   state.board = applyMove(state.board, move);
   state.history.push({ move, captured, previousBoard, previousSide: state.side });
@@ -606,37 +610,13 @@ function resetEngineAnalyses() {
   if (button) { button.disabled = !state.pikafish?.ready; button.textContent = '重新分析'; }
 }
 
-async function requestAdvice() {
-  const button = $('#suggest-button'); const output = $('#ai-output');
-  button.disabled = true; button.textContent = '分析中…'; output.textContent = '正在分析当前局势，稍候显示推荐着法…';
-  const controller = new AbortController(); const timeout = setTimeout(() => controller.abort(), 20000);
-  try {
-    const moves = legalMoves(state.board, state.side);
-    if (!moves.length) { output.textContent = '当前局面没有合法着法，棋局可能已经结束。'; return; }
-    const result = await requestSuggestion({ board: state.board, side: state.side, moves, settings: state.settings, strength: $('#strength-select').value, signal: controller.signal });
-    output.textContent = `${names[state.side]}可考虑 ${chineseNotation(state.board, result.move, state.side)}。${result.explanation}`;
-  } catch (error) {
-    const cause = error.name === 'AbortError' ? '请求超时' : error.message;
-    if (state.settings.apiUrl && state.settings.apiKey && state.settings.model) {
-      try {
-        const move = await chooseLocalMoveAsync(state.board, state.side, $('#strength-select').value);
-        if (move && legalMoves(state.board, state.side).some((candidate) => sameMove(candidate, move))) {
-          output.textContent = `外部 AI 暂不可用（${cause}），本地建议：${names[state.side]}可考虑 ${chineseNotation(state.board, move, state.side)}。本地搜索建议，棋力未经对局基准认证。`;
-        } else output.textContent = `外部 AI 暂不可用（${cause}），本地搜索未能提供合法着法。`;
-      } catch (fallbackError) { output.textContent = `暂时无法分析：${cause}；本地搜索失败：${fallbackError.message}`; }
-    } else output.textContent = `暂时无法分析：${cause}`;
-  } finally {
-    clearTimeout(timeout); button.disabled = false; button.textContent = '局势建议';
-  }
-}
-
 function installEnginePanel() {
   if ($('#pikafish-panel')) return;
   const panel = document.createElement('section');
   panel.id = 'pikafish-panel';
   panel.className = 'panel engine-panel';
   panel.innerHTML = `<div class="panel-title"><div><h2>Pikafish 引擎</h2><span id="pikafish-status" class="muted" role="status">正在准备本地引擎…</span></div><span class="engine-badge">WASM</span></div><div class="engine-toolbar"><button id="pikafish-start" class="secondary-button">正在加载…</button><button id="pikafish-analyze" class="primary-button" disabled>分析局面</button><label class="engine-depth"><span>深度</span><select id="pikafish-depth" aria-label="搜索深度"><option value="12">快速 · 12 层</option><option value="16">标准 · 16 层</option><option value="20" selected>深入 · 20 层</option></select></label></div><div id="pikafish-lines" class="engine-lines"></div><p class="engine-footnote">引擎就绪后会在每步落子后自动分析红黑双方各自回合的局面；首次加载需下载 NNUE 网络。</p>`;
-  $('.game-sidebar').insertBefore(panel, $('.history-panel'));
+  $('.game-sidebar').append(panel);
   renderEngineLines();
 }
 
@@ -797,7 +777,6 @@ function bindEvents() {
   $('#mode-select').addEventListener('change', () => { resetEngineAnalyses(); state.board = initialBoard(); state.side = RED; state.history = []; state.gameOver = false; state.adjudication = null; renderPlayBoard(); saveGame(); if ($('#mode-select').value === 'ai' && $('#side-select').value === 'black') scheduleAiMove(); else if (state.pikafish?.ready) void requestPikafishAnalysis(); });
   $('#strength-select').addEventListener('change', saveGame);
   $('#side-select').addEventListener('change', () => { if ($('#mode-select').value === 'ai') { resetEngineAnalyses(); state.board = initialBoard(); state.side = RED; state.history = []; state.gameOver = false; state.adjudication = null; renderPlayBoard(); saveGame(); if ($('#side-select').value === 'black') scheduleAiMove(); else if (state.pikafish?.ready) void requestPikafishAnalysis(); } });
-  $('#suggest-button').addEventListener('click', requestAdvice);
   $('#pikafish-start').addEventListener('click', startPikafish);
   $('#pikafish-analyze').addEventListener('click', analyzePikafish);
   $('#pikafish-depth').addEventListener('change', () => { if (state.pikafish?.ready) void requestPikafishAnalysis(); });

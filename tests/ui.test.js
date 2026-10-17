@@ -1,0 +1,25 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+
+const read = (path) => readFile(new URL(path, import.meta.url), 'utf8');
+
+test('play sidebar places settings between history and engine', async () => {
+  const [html, app] = await Promise.all([read('../index.html'), read('../src/app.js')]);
+  assert.ok(html.indexOf('class="panel history-panel"') < html.indexOf('class="panel setup-panel"'));
+  assert.match(app, /\.game-sidebar'\)\.append\(panel\)/);
+});
+
+test('play view removes the standalone advice action while keeping AI status output', async () => {
+  const html = await read('../index.html');
+  const app = await read('../src/app.js');
+  assert.doesNotMatch(html, /suggest-button|局势建议/);
+  assert.match(html, /id="ai-output"/);
+  assert.doesNotMatch(app, /requestAdvice|suggest-button/);
+});
+
+test('study replay draws the current move with the shared analysis arrow renderer', async () => {
+  const app = await read('../src/app.js');
+  assert.match(app, /const arrows = previous \? \[\{ \.\.\.previous, side: previousSide \}\] : \[\]/);
+  assert.match(app, /renderBoard\(\$\('#study-board'\).*previous, new Map\(\), arrows\)/);
+});

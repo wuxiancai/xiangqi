@@ -4,11 +4,12 @@ import { playMoveSound } from '../src/audio.js';
 
 function createFakeAudio() {
   const created = { oscillators: 0, bufferSources: 0, filters: 0 };
+  const frequencies = [];
   const parameter = { setValueAtTime() {}, exponentialRampToValueAtTime() {} };
   const node = () => ({ connect() { return this; }, start() {}, stop() {}, frequency: parameter, gain: parameter });
   return {
-    state: 'running', currentTime: 1, sampleRate: 1000, destination: {}, created,
-    createOscillator() { created.oscillators += 1; return node(); },
+    state: 'running', currentTime: 1, sampleRate: 1000, destination: {}, created, frequencies,
+    createOscillator() { created.oscillators += 1; return { ...node(), frequency: { setValueAtTime(value) { frequencies.push(value); }, exponentialRampToValueAtTime() {} } }; },
     createGain: node,
     createBufferSource() { created.bufferSources += 1; return node(); },
     createBiquadFilter() { created.filters += 1; return node(); },
@@ -24,6 +25,22 @@ test('ordinary move and capture sounds use distinct synthesis paths', () => {
   const captureAudio = createFakeAudio();
   playMoveSound(captureAudio, true);
   assert.deepEqual(captureAudio.created, { oscillators: 1, bufferSources: 2, filters: 2 });
+});
+
+test('red and black moves have distinct audio signatures', () => {
+  const redAudio = createFakeAudio();
+  const blackAudio = createFakeAudio();
+  playMoveSound(redAudio, false, 'red');
+  playMoveSound(blackAudio, false, 'black');
+  assert.notDeepEqual(redAudio.frequencies, blackAudio.frequencies);
+});
+
+test('red and black captures have distinct audio signatures', () => {
+  const redAudio = createFakeAudio();
+  const blackAudio = createFakeAudio();
+  playMoveSound(redAudio, true, 'red');
+  playMoveSound(blackAudio, true, 'black');
+  assert.notDeepEqual(redAudio.frequencies, blackAudio.frequencies);
 });
 
 test('sound remains silent until browser audio is unlocked', () => {
