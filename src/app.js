@@ -3,7 +3,7 @@ import { chooseLocalMoveAsync, requestSuggestion } from './ai.js';
 import { loadSettings, recordRepository, saveSettings } from './storage.js';
 import { chineseNotation } from './notation.js';
 import { adjudicateRepetition } from './repetition.js';
-import { playMoveSound } from './audio.js';
+import { playCheckSound, playMoveSound } from './audio.js';
 import { convertTextToRecord, extractText, findExistingImportedRecord, importXqfFolderFiles, MAX_IMPORT_SIZE } from './importer.js';
 import { parseXqf, xqfMovesAsText } from './xqf.js';
 import { cblMovesAsText, parseCbl } from './cbl.js';
@@ -272,7 +272,9 @@ function stepStudy(delta) {
   const nextPly = Math.max(0, Math.min(state.currentRecord.moves.length, state.studyPly + delta));
   if (delta > 0 && nextPly > state.studyPly) {
     const move = state.currentRecord.moves[nextPly - 1];
-  playMoveSound(moveAudio, Boolean(state.currentRecord.positions[state.studyPly][move.to]));
+    playMoveSound(moveAudio, Boolean(state.currentRecord.positions[state.studyPly][move.to]));
+    const nextSide = nextPly % 2 === 1 ? BLACK : RED;
+    if (isInCheck(state.currentRecord.positions[nextPly], nextSide)) playCheckSound(moveAudio);
   }
   state.studyPly = nextPly;
   if (state.studyPly === state.currentRecord.moves.length) stopPlayback();
@@ -513,6 +515,7 @@ async function playMove(move) {
   state.side = otherSide(state.side); state.selectedSquare = null;
   state.engineLines = [];
   const status = gameStatus(state.board, state.side);
+  if (status.inCheck) playCheckSound(moveAudio);
   const initialPosition = state.history[0];
   const trace = [{ key: `${initialPosition.previousBoard.map((piece) => piece ?? '.').join('')}:${initialPosition.previousSide}` }];
   for (const entry of state.history) {

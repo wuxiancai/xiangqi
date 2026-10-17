@@ -18,6 +18,24 @@ export function playMoveSound(audio, captured = false) {
   tone.stop(now + 0.095);
 }
 
+export function playCheckSound(audio) {
+  if (!audio || audio.state !== 'running') return;
+  const start = audio.currentTime + 0.12;
+  for (const [offset, frequency] of [[0, 880], [0.16, 1174.66]]) {
+    const tone = audio.createOscillator();
+    const volume = audio.createGain();
+    const at = start + offset;
+    tone.type = 'sine';
+    tone.frequency.setValueAtTime(frequency, at);
+    volume.gain.setValueAtTime(0.0001, at);
+    volume.gain.exponentialRampToValueAtTime(0.16, at + 0.008);
+    volume.gain.exponentialRampToValueAtTime(0.0001, at + 0.13);
+    tone.connect(volume).connect(audio.destination);
+    tone.start(at);
+    tone.stop(at + 0.14);
+  }
+}
+
 function playCaptureSound(audio, now) {
   const impact = audio.createOscillator();
   const impactVolume = audio.createGain();
