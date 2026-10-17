@@ -51,9 +51,9 @@
 .last-move-origin-ring{fill:none;stroke:#fff;stroke-width:1.4;opacity:.85;filter:drop-shadow(0 0 1.2px #fff);pointer-events:none}
 .last-move-origin{fill:#fff;filter:drop-shadow(0 0 1.2px #fff);pointer-events:none}
 .last-move-destination{fill:none;stroke:#fff;stroke-width:1.8;opacity:.94;filter:drop-shadow(0 0 1.5px #fff);pointer-events:none}
-.analysis-arrow{pointer-events:none;--arrow-color:#a62f24;opacity:.78}
+.analysis-arrow{pointer-events:none;--arrow-color:#f02b22;opacity:1}
 .analysis-arrow.black{--arrow-color:#3983b5}
-.analysis-arrow .arrow-visible{fill:none;stroke:var(--arrow-color);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 1px 1px #fff9);pointer-events:none}
+.analysis-arrow .arrow-visible{fill:none;stroke:var(--arrow-color);stroke-width:3;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 2px #fff) drop-shadow(0 1px 1px #3b2412);pointer-events:none}
 
 /* Readability and touch improvements for the study workflow. */
 :root{--muted:#68736b;--line:#ddd6c8;--green:#245c45;--green-dark:#1c4936}

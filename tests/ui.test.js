@@ -23,3 +23,11 @@ test('study replay draws the current move with the shared analysis arrow rendere
   assert.match(app, /const arrows = previous \? \[\{ \.\.\.previous, side: previousSide \}\] : \[\]/);
   assert.match(app, /renderBoard\(\$\('#study-board'\).*previous, new Map\(\), arrows\)/);
 });
+
+
+test('red analysis arrow has strong contrast on the wooden board', async () => {
+  const css = await read('../styles.css');
+  assert.match(css, /analysis-arrow[^}]*--arrow-color:#f02b22/);
+  assert.match(css, /analysis-arrow \.arrow-visible[^}]*stroke-width:3/);
+  assert.match(css, /analysis-arrow \.arrow-visible[^}]*drop-shadow\(0 0 2px #fff\)/);
+});

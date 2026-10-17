@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { playMoveSound } from '../src/audio.js';
+import { playCheckSound, playMoveSound } from '../src/audio.js';
 
 function createFakeAudio() {
   const created = { oscillators: 0, bufferSources: 0, filters: 0 };
@@ -48,4 +48,16 @@ test('sound remains silent until browser audio is unlocked', () => {
   audio.state = 'suspended';
   playMoveSound(audio, true);
   assert.deepEqual(audio.created, { oscillators: 0, bufferSources: 0, filters: 0 });
+});
+
+
+test('check notification speaks the Chinese phrase 将军 instead of synthesizing a beep', () => {
+  const spoken = [];
+  const speech = { getVoices: () => [{ lang: 'en-US' }, { lang: 'zh-CN', name: 'Chinese voice' }], speak: (utterance) => spoken.push(utterance), cancel() {} };
+  class FakeUtterance { constructor(text) { this.text = text; } }
+  playCheckSound(speech, FakeUtterance);
+  assert.equal(spoken.length, 1);
+  assert.equal(spoken[0].text, '将军');
+  assert.equal(spoken[0].lang, 'zh-CN');
+  assert.equal(spoken[0].voice.name, 'Chinese voice');
 });

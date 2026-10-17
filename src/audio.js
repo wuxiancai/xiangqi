@@ -18,22 +18,16 @@ export function playMoveSound(audio, captured = false, side = 'red') {
   tone.stop(now + 0.095);
 }
 
-export function playCheckSound(audio) {
-  if (!audio || audio.state !== 'running') return;
-  const start = audio.currentTime + 0.12;
-  for (const [offset, frequency] of [[0, 880], [0.16, 1174.66]]) {
-    const tone = audio.createOscillator();
-    const volume = audio.createGain();
-    const at = start + offset;
-    tone.type = 'sine';
-    tone.frequency.setValueAtTime(frequency, at);
-    volume.gain.setValueAtTime(0.0001, at);
-    volume.gain.exponentialRampToValueAtTime(0.16, at + 0.008);
-    volume.gain.exponentialRampToValueAtTime(0.0001, at + 0.13);
-    tone.connect(volume).connect(audio.destination);
-    tone.start(at);
-    tone.stop(at + 0.14);
-  }
+export function playCheckSound(speech = globalThis.speechSynthesis, Utterance = globalThis.SpeechSynthesisUtterance) {
+  if (!speech || !Utterance) return;
+  const utterance = new Utterance('将军');
+  utterance.lang = 'zh-CN';
+  utterance.rate = 1;
+  utterance.pitch = 1;
+  utterance.volume = 1;
+  utterance.voice = speech.getVoices?.().find((voice) => /^zh(?:[-_]|$)/i.test(voice.lang)) ?? null;
+  speech.cancel?.();
+  speech.speak(utterance);
 }
 
 function playCaptureSound(audio, now, side) {
