@@ -43,14 +43,18 @@
 .piece-label{font-family:'Noto Serif SC',serif;font-weight:700;font-size:21px;text-anchor:middle;dominant-baseline:central;pointer-events:none;paint-order:normal;stroke:none}
 .piece-label.red{fill:#a62f24;stroke:none}
 .piece-label.black{fill:#211f1c;stroke:none}
-.threat-ring.protected{fill:#ed443d;fill-opacity:.25;stroke:#e33e35;stroke-width:1.5;filter:drop-shadow(0 0 1.5px #ee413966)}
-.threat-ring.exposed{fill:#42d963;fill-opacity:.22;stroke:#39bf50;stroke-width:1.5;filter:drop-shadow(0 0 1.5px #37da5b66)}
+.threat-ring.protected{fill:#ed443d;fill-opacity:.14;stroke:#e33e35;stroke-width:2;stroke-dasharray:10 6;filter:drop-shadow(0 0 1.5px #ee413966)}
+.threat-ring.exposed{fill:#42d963;fill-opacity:.14;stroke:#39bf50;stroke-width:2;stroke-dasharray:10 6;filter:drop-shadow(0 0 1.5px #37da5b66)}
 .board-legend{gap:7px}
 .threat-key.red{border-color:#e33e35;background:#ed443d38;box-shadow:0 0 5px #ee413d55}
 .threat-key.green{border-color:#258552;background:#4dba7b38;box-shadow:0 0 5px #2e9a6255}
-.last-move-origin-ring{fill:none;stroke:#fff;stroke-width:1.4;opacity:.85;filter:drop-shadow(0 0 1.2px #fff);pointer-events:none}
-.last-move-origin{fill:#fff;filter:drop-shadow(0 0 1.2px #fff);pointer-events:none}
-.last-move-destination{fill:none;stroke:#fff;stroke-width:1.8;opacity:.94;filter:drop-shadow(0 0 1.5px #fff);pointer-events:none}
+.threat-ring,.selected-piece-ring,.last-move-origin-ring,.last-move-origin,.last-move-destination{transform-box:fill-box;transform-origin:center;animation:chess-ring-spin 2.8s linear infinite;pointer-events:none}
+.selected-piece-ring{fill:none;stroke:#40805d;stroke-width:1.8;stroke-dasharray:11 6}
+.last-move-origin-ring{fill:none;stroke:#fff;stroke-width:1.6;stroke-dasharray:5 3;opacity:.92;filter:drop-shadow(0 0 1.2px #fff)}
+.last-move-origin{fill:none;stroke:#fff;stroke-width:1.8;stroke-dasharray:3 2;filter:drop-shadow(0 0 1.2px #fff)}
+.last-move-destination{fill:none;stroke:#fff;stroke-width:2;stroke-dasharray:9 5;opacity:.98;filter:drop-shadow(0 0 1.5px #fff)}
+@keyframes chess-ring-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.threat-ring,.selected-piece-ring,.last-move-origin-ring,.last-move-origin,.last-move-destination{animation:none}}
 .analysis-arrow{pointer-events:none;--arrow-color:#f02b22;opacity:1}
 .analysis-arrow.black{--arrow-color:#3983b5}
 .analysis-arrow .arrow-visible{fill:none;stroke:var(--arrow-color);stroke-width:6;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 2px #fff) drop-shadow(0 1px 1px #3b2412);pointer-events:none}
