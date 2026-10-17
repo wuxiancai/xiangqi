@@ -51,6 +51,17 @@
 .last-move-origin-ring{fill:none;stroke:#fff;stroke-width:1.4;opacity:.85;filter:drop-shadow(0 0 1.2px #fff);pointer-events:none}
 .last-move-origin{fill:#fff;filter:drop-shadow(0 0 1.2px #fff);pointer-events:none}
 .last-move-destination{fill:none;stroke:#fff;stroke-width:1.8;opacity:.94;filter:drop-shadow(0 0 1.5px #fff);pointer-events:none}
+.analysis-arrow{cursor:pointer;--arrow-color:#a62f24;opacity:1}
+.analysis-arrow.black{--arrow-color:#3983b5}
+.analysis-arrow.rank-2{opacity:.68}
+.analysis-arrow.rank-3{opacity:.42}
+.analysis-arrow .arrow-visible{stroke:var(--arrow-color);stroke-width:3.2;stroke-linecap:round;filter:drop-shadow(0 0 2px #fff);pointer-events:none}
+.analysis-arrow .arrow-hit{stroke:transparent;stroke-width:20;pointer-events:stroke}
+.analysis-square{fill:var(--arrow-color);stroke:var(--arrow-color);pointer-events:none}
+.analysis-square.origin{fill-opacity:.08;stroke-width:1.6;stroke-dasharray:3 2}
+.analysis-square.destination{fill-opacity:.16;stroke-width:2}
+.analysis-arrow:focus-visible{outline:none;filter:drop-shadow(0 0 3px #fff)}
+.analysis-arrow:hover{opacity:1;filter:drop-shadow(0 0 3px #fff)}
 
 /* Readability and touch improvements for the study workflow. */
 :root{--muted:#68736b;--line:#ddd6c8;--green:#245c45;--green-dark:#1c4936}

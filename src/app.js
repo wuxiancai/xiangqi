@@ -45,11 +45,11 @@ function svgElement(name, attributes = {}) {
   return node;
 }
 
-function renderBoard(svg, board, flipped, onSquare, selected = null, hints = [], lastMove = null, threatened = new Map()) {
+function renderBoard(svg, board, flipped, onSquare, selected = null, hints = [], lastMove = null, threatened = new Map(), analysisMoves = [], onAnalysisMove = () => {}) {
   svg.replaceChildren();
   const prefix = svg.id;
   const defs = svgElement('defs');
-  defs.innerHTML = `<linearGradient id="${prefix}-wood" x2="0" y2="1"><stop stop-color="#dbb77c"/><stop offset=".48" stop-color="#cba36a"/><stop offset="1" stop-color="#d9b77f"/></linearGradient><radialGradient id="${prefix}-red-face" cx="30%" cy="17%" r="86%"><stop stop-color="#fffdf4"/><stop offset=".48" stop-color="#f8e8ca"/><stop offset=".78" stop-color="#d9ae70"/><stop offset="1" stop-color="#a66d37"/></radialGradient><radialGradient id="${prefix}-black-face" cx="30%" cy="17%" r="86%"><stop stop-color="#fffdf4"/><stop offset=".48" stop-color="#f8e8ca"/><stop offset=".78" stop-color="#d9ae70"/><stop offset="1" stop-color="#a66d37"/></radialGradient><linearGradient id="${prefix}-gold-rim" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff9dc"/><stop offset=".22" stop-color="#f4d995"/><stop offset=".48" stop-color="#c18b49"/><stop offset=".68" stop-color="#fff0c0"/><stop offset=".88" stop-color="#9a632f"/><stop offset="1" stop-color="#f1d08a"/></linearGradient><linearGradient id="${prefix}-piece-side" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#e7c580"/><stop offset=".34" stop-color="#b47a3d"/><stop offset="1" stop-color="#714522"/></linearGradient><filter id="${prefix}-piece-shadow" x="-50%" y="-50%" width="210%" height="230%"><feGaussianBlur in="SourceAlpha" stdDeviation="3.5"/><feOffset dy="4"/><feComponentTransfer><feFuncA type="linear" slope=".48"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter><filter id="${prefix}-threat-glow" x="-70%" y="-70%" width="240%" height="240%"><feGaussianBlur stdDeviation="2.6" result="blur"/><feFlood flood-color="#e34b35" flood-opacity=".78"/><feComposite in2="blur" operator="in"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>`;
+  defs.innerHTML = `<linearGradient id="${prefix}-wood" x2="0" y2="1"><stop stop-color="#dbb77c"/><stop offset=".48" stop-color="#cba36a"/><stop offset="1" stop-color="#d9b77f"/></linearGradient><radialGradient id="${prefix}-red-face" cx="30%" cy="17%" r="86%"><stop stop-color="#fffdf4"/><stop offset=".48" stop-color="#f8e8ca"/><stop offset=".78" stop-color="#d9ae70"/><stop offset="1" stop-color="#a66d37"/></radialGradient><radialGradient id="${prefix}-black-face" cx="30%" cy="17%" r="86%"><stop stop-color="#fffdf4"/><stop offset=".48" stop-color="#f8e8ca"/><stop offset=".78" stop-color="#d9ae70"/><stop offset="1" stop-color="#a66d37"/></radialGradient><linearGradient id="${prefix}-gold-rim" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff9dc"/><stop offset=".22" stop-color="#f4d995"/><stop offset=".48" stop-color="#c18b49"/><stop offset=".68" stop-color="#fff0c0"/><stop offset=".88" stop-color="#9a632f"/><stop offset="1" stop-color="#f1d08a"/></linearGradient><linearGradient id="${prefix}-piece-side" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#e7c580"/><stop offset=".34" stop-color="#b47a3d"/><stop offset="1" stop-color="#714522"/></linearGradient><filter id="${prefix}-piece-shadow" x="-50%" y="-50%" width="210%" height="230%"><feGaussianBlur in="SourceAlpha" stdDeviation="3.5"/><feOffset dy="4"/><feComponentTransfer><feFuncA type="linear" slope=".48"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter><filter id="${prefix}-threat-glow" x="-70%" y="-70%" width="240%" height="240%"><feGaussianBlur stdDeviation="2.6" result="blur"/><feFlood flood-color="#e34b35" flood-opacity=".78"/><feComposite in2="blur" operator="in"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter><marker id="${prefix}-analysis-arrow-red" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto" markerUnits="strokeWidth"><path d="M 0 0 L 8 4 L 0 8 z" fill="#a62f24" stroke="#fffdf5" stroke-width=".7"/></marker><marker id="${prefix}-analysis-arrow-black" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto" markerUnits="strokeWidth"><path d="M 0 0 L 8 4 L 0 8 z" fill="#3983b5" stroke="#fffdf5" stroke-width=".7"/></marker>`;
   svg.append(defs);
   svg.append(svgElement('rect', { x: 0, y: 0, width: 500, height: 550, rx: 8, class: 'board-background', fill: `url(#${prefix}-wood)` }));
   const lines = svgElement('g', { class: 'board-lines' });
@@ -114,8 +114,26 @@ function renderBoard(svg, board, flipped, onSquare, selected = null, hints = [],
     const hit = svgElement('rect', { x: x - 26, y: y - 26, width: 52, height: 52, class: 'board-hit', tabindex: '0', role: 'gridcell', 'aria-label': `${toICCS(square)}${piece ? ` ${labels[piece]}${threatDescription}` : ''}` });
     hit.dataset.square = String(square); svg.append(hit);
   }
-  svg.onclick = (event) => { const target = event.target.closest('[data-square]'); if (target) onSquare(Number(target.dataset.square)); };
-  svg.onkeydown = (event) => { const target = event.target.closest('[data-square]'); if (target && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); onSquare(Number(target.dataset.square)); } };
+  for (const [index, move] of analysisMoves.entries()) {
+    if (!Number.isInteger(move.from) || !Number.isInteger(move.to)) continue;
+    const from = mapSquare(move.from, flipped); const to = mapSquare(move.to, flipped);
+    const start = point(from.file, from.rank); const end = point(to.file, to.rank);
+    const group = svgElement('g', { class: `analysis-arrow ${move.side} rank-${index + 1}`, role: 'button', tabindex: '0', 'aria-label': `分析着法 ${move.notation}，点击行棋` });
+    group.dataset.analysisMove = `${move.from}:${move.to}`;
+    group.append(svgElement('rect', { x: start.x - 24, y: start.y - 24, width: 48, height: 48, class: 'analysis-square origin' }));
+    group.append(svgElement('line', { x1: start.x, y1: start.y, x2: end.x, y2: end.y, class: 'arrow-hit' }));
+    group.append(svgElement('line', { x1: start.x, y1: start.y, x2: end.x, y2: end.y, class: 'arrow-visible', 'marker-end': `url(#${prefix}-analysis-arrow-${move.side})` }));
+    group.append(svgElement('rect', { x: end.x - 24, y: end.y - 24, width: 48, height: 48, class: 'analysis-square destination' }));
+    svg.append(group);
+  }
+  const activate = (target) => {
+    if (target?.dataset.analysisMove) {
+      const [from, to] = target.dataset.analysisMove.split(':').map(Number);
+      onAnalysisMove({ from, to });
+    } else if (target?.dataset.square) onSquare(Number(target.dataset.square));
+  };
+  svg.onclick = (event) => activate(event.target.closest('[data-analysis-move], [data-square]'));
+  svg.onkeydown = (event) => { const target = event.target.closest('[data-analysis-move], [data-square]'); if (target && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); activate(target); } };
 }
 
 function renderStudyBoard() {
@@ -469,7 +487,19 @@ function saveGame() {
 function renderPlayBoard() {
   const last = state.history.at(-1)?.move ?? null;
   const status = gameStatus(state.board, state.side);
-  renderBoard($('#play-board'), state.board, state.playFlipped, onPlaySquare, state.selectedSquare ?? null, state.selectedSquare == null ? [] : legalMoves(state.board, state.side).filter((move) => move.from === state.selectedSquare), last, pieceThreatStatus(state.board));
+  const analysis = state.engineAnalyses[state.side];
+  const arrows = analysis?.position === positionKey(state.board, state.side) ? analysis.lines.flatMap((line) => {
+    try {
+      const iccs = engineMoveToICCS(line.pv?.[0]);
+      const move = { from: fromICCS(iccs.slice(0, 2)), to: fromICCS(iccs.slice(2, 4)), side: state.side };
+      if (!legalMoves(state.board, state.side).some((candidate) => sameMove(candidate, move))) return [];
+      return [{ ...move, notation: chineseNotation(state.board, move, state.side) }];
+    } catch { return []; }
+  }).slice(0, 3) : [];
+  renderBoard($('#play-board'), state.board, state.playFlipped, onPlaySquare, state.selectedSquare ?? null, state.selectedSquare == null ? [] : legalMoves(state.board, state.side).filter((move) => move.from === state.selectedSquare), last, pieceThreatStatus(state.board), arrows, (move) => {
+    if (state.gameOver || state.aiBusy || !arrows.some((arrow) => sameMove(arrow, move))) return;
+    void playMove(move);
+  });
   const endStatus = state.adjudication ?? status;
   const endReason = state.adjudication ? '长将判负' : status.reason;
   $('#turn-label').textContent = state.gameOver ? `${names[endStatus.winner]}胜 · ${endReason}` : `${names[state.side]}走棋${status.inCheck ? ' · 将军' : ''}`;
@@ -706,7 +736,7 @@ async function startPikafish() {
     } else if (message.type === 'status') status.textContent = message.text;
     else if (message.type === 'analysis') {
       const analysis = state.engineAnalyses[message.side];
-      if (analysis?.analysisId === message.analysisId) { analysis.lines = message.lines; renderEngineLines(); }
+      if (analysis?.analysisId === message.analysisId) { analysis.lines = message.lines; renderPlayBoard(); renderEngineLines(); }
     }
   });
   try {
