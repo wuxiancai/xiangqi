@@ -5,6 +5,7 @@ import os
 import platform
 import plistlib
 import shutil
+import socket
 import subprocess
 import sys
 from pathlib import Path
@@ -31,6 +32,14 @@ def validate_port():
         raise SystemExit("PORT 必须是 1–65535 范围内的整数。") from error
     if not 1 <= port <= 65535:
         raise SystemExit("PORT 必须是 1–65535 范围内的整数。")
+    for candidate in range(port, 65536):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+            try:
+                probe.bind(("0.0.0.0", candidate))
+            except OSError:
+                continue
+            return candidate
+    raise SystemExit(f"从端口 {port} 起没有可用端口。")
 
 
 def deploy_linux():
@@ -77,7 +86,7 @@ def deploy_macos():
 
 def deploy_windows():
     python = shutil.which("python") or sys.executable
-    command = f'"{python}" "{ROOT / "scripts" / "run_server.py"}"'
+    command = f'"{python}" "{ROOT / "scripts" / "run_server.py"}" --port {PORT}'
     run(["schtasks", "/Create", "/SC", "ONLOGON", "/TN", WINDOWS_TASK, "/TR", command, "/F"])
     run(["schtasks", "/Change", "/TN", WINDOWS_TASK, "/ENABLE"])
     run(["schtasks", "/Run", "/TN", WINDOWS_TASK])
@@ -85,7 +94,8 @@ def deploy_windows():
 
 
 def main():
-    validate_port()
+    global PORT
+    PORT = str(validate_port())
     system = platform.system()
     if system == "Linux":
         deploy_linux()

@@ -3,6 +3,7 @@
 import hashlib
 import json
 import os
+import errno
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
@@ -101,8 +102,18 @@ class Handler(SimpleHTTPRequestHandler):
 
 
 def main():
-    port = int(os.environ.get("PORT", "8000"))
-    ThreadingHTTPServer(("0.0.0.0", port), Handler).serve_forever()
+    first_port = int(os.environ.get("PORT", "8000"))
+    for port in range(first_port, 65536):
+        try:
+            server = ThreadingHTTPServer(("0.0.0.0", port), Handler)
+        except OSError as error:
+            if error.errno == errno.EADDRINUSE:
+                continue
+            raise
+        print(f"楚河 v1.0 已启动：http://0.0.0.0:{port}", flush=True)
+        server.serve_forever()
+        return
+    raise SystemExit(f"从端口 {first_port} 起没有可用端口")
 
 
 if __name__ == "__main__":

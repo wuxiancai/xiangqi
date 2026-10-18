@@ -1,5 +1,7 @@
 # 楚河：中国象棋学习与对弈
 
+当前发布版本：**v1.0**（包版本 `1.0.0`）。
+
 纯静态 HTML/CSS/JavaScript 单页应用。棋盘以 SVG 绘制，规则、棋谱校验和基础 AI 搜索在浏览器本地运行。用户可导入 `xiangqi-study/v1` UTF-8 JSON 棋谱，文件上限 2 MiB；格式定义见 [JSON Schema](docs/xiangqi-study-v1.schema.json)，导入样例见 [格式示例](examples/xiangqi-study-v1.example.json)。样例是原创格式演示，不是古谱或历史对局。
 
 ## 本地运行
@@ -10,7 +12,7 @@
 python3 scripts/deploy.py
 ```
 
-Linux（必须有 systemd）：`sudo python3 scripts/deploy.py`。macOS 使用 launchd，Windows 使用任务计划程序。默认端口 `8000`，Linux/macOS 可用 `PORT=8080` 修改。部署后浏览器访问 `http://<主机地址>:<端口>`。停止并禁用自启动：`python3 scripts/stop.py`；Linux 用 `sudo python3 scripts/stop.py`。停止不删除服务配置或项目文件；再次执行部署会重新启用并启动。ES modules、IndexedDB 和 Service Worker 需要 HTTP(S) 页面，直接用 `file://` 打开不受支持。
+Linux（必须有 systemd）：`sudo python3 scripts/deploy.py`。macOS 使用 launchd，Windows 使用任务计划程序。默认从端口 `8000` 开始；若端口被占用，自动递增检查 `8001`、`8002` 等端口。可通过 `PORT=8080` 指定其他起始端口，仍会在占用时向后顺延。部署后浏览器访问部署脚本显示的端口。停止并禁用自启动：`python3 scripts/stop.py`；Linux 用 `sudo python3 scripts/stop.py`。停止不删除服务配置或项目文件；再次执行部署会重新启用并启动。ES modules、IndexedDB 和 Service Worker 需要 HTTP(S) 页面，直接用 `file://` 打开不受支持。
 
 Linux systemd 服务模板位于 `deploy/xiangqi.service`，部署脚本会按上传目录、运行用户和端口生成服务单元。`scripts/run_server.py` 可用于本机临时运行，但生产部署应使用 `deploy.py`，以确保服务受 systemd/launchd/任务计划管理。
 

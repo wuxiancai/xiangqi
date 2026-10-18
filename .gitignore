@@ -2,3 +2,9 @@ data/imported/*.json
 data/imported/*.tmp
 .build/
 engine/pikafish/dist/
+.venv/
+.DS_Store
+*.log
+__pycache__/
+*.py[cod]
+.runtime/

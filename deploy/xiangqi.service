@@ -1,5 +1,5 @@
 [Unit]
-Description=楚河中国象棋学习与对弈 Web 应用
+Description=楚河 v1.0 中国象棋学习与对弈 Web 应用
 After=network.target
 
 [Service]

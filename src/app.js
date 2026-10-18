@@ -474,7 +474,7 @@ async function exportRecords() {
 }
 
 function saveGame() {
-  const payload = { board: state.board, side: state.side, history: state.history, gameOver: state.gameOver, adjudication: state.adjudication, mode: $('#mode-select').value, userSide: $('#side-select').value, strength: $('#strength-select').value };
+  const payload = { board: state.board, side: state.side, history: state.history, gameOver: state.gameOver, adjudication: state.adjudication, mode: $('#mode-select').value, userSide: $('#side-select').value };
   recordRepository.putState('active-game', payload).catch(() => {});
 }
 
@@ -577,14 +577,14 @@ async function scheduleAiMove() {
       if (/^[a-i][0-9][a-i][0-9]$/.test(uciMove)) { const iccs = engineMoveToICCS(uciMove); move = { from: fromICCS(iccs.slice(0, 2)), to: fromICCS(iccs.slice(2, 4)) }; }
       $('#ai-output').textContent = 'Pikafish 引擎建议，着法已通过本地规则校验。';
     } else {
-      const result = await requestSuggestion({ board: state.board, side: state.side, moves: legalMoves(state.board, state.side), settings: state.settings, strength: $('#strength-select').value, signal: controller.signal });
+      const result = await requestSuggestion({ board: state.board, side: state.side, moves: legalMoves(state.board, state.side), settings: state.settings, strength: 'max', signal: controller.signal });
       move = result.move;
       if (result.provider === 'external') $('#ai-output').textContent = `AI 分析：${result.explanation}（外部模型建议，棋力未认证）`;
       else $('#ai-output').textContent = `AI 建议：${result.explanation}`;
     }
   } catch (error) {
     if (state.settings.apiUrl && state.settings.apiKey && state.settings.model) {
-      move = await chooseLocalMoveAsync(state.board, state.side, $('#strength-select').value);
+      move = await chooseLocalMoveAsync(state.board, state.side, 'max');
       $('#ai-output').textContent = `AI 服务暂不可用，已降级到本地基础策略：${error.name === 'AbortError' ? '请求超时' : error.message}`;
     } else {
       $('#ai-output').textContent = `本地 AI 搜索失败：${error.message}`;
@@ -620,7 +620,7 @@ function installEnginePanel() {
   const panel = document.createElement('section');
   panel.id = 'pikafish-panel';
   panel.className = 'panel engine-panel';
-  panel.innerHTML = `<div class="panel-title"><div><h2>Pikafish 引擎</h2><span id="pikafish-status" class="muted" role="status">正在准备本地引擎…</span></div><span class="engine-badge">WASM</span></div><div class="engine-toolbar"><button id="pikafish-start" class="secondary-button">正在加载…</button><button id="pikafish-analyze" class="primary-button" disabled>分析局面</button><label class="engine-depth"><span>深度</span><select id="pikafish-depth" aria-label="搜索深度"><option value="12">快速 · 12 层</option><option value="20">标准 · 20 层</option><option value="30" selected>最强 · 30 层</option></select></label></div><div id="pikafish-lines" class="engine-lines"></div><p class="engine-footnote">默认使用 Pikafish 单主线搜索、可用 CPU 线程（最多 8）和 256 MiB 哈希表；最强档搜索至 30 层。首次加载需下载 NNUE 网络。</p>`;
+  panel.innerHTML = `<div class="panel-title"><div><h2>Pikafish 引擎</h2><span id="pikafish-status" class="muted" role="status">正在准备本地引擎…</span></div><span class="engine-badge">WASM</span></div><div class="engine-toolbar"><button id="pikafish-start" class="secondary-button">正在加载…</button><button id="pikafish-analyze" class="primary-button" disabled>分析局面</button><label class="engine-depth"><span>深度</span><select id="pikafish-depth" aria-label="搜索深度"><option value="12">快速 · 12 层</option><option value="20">标准 · 20 层</option><option value="30" selected>最强 · 30 层</option></select></label></div><div class="engine-game-options"><label class="engine-game-option">对弈模式<select id="mode-select"><option value="local">本地双人</option><option value="ai" selected>用户 vs AI</option></select></label><label class="engine-game-option">你执哪方<select id="side-select"><option value="red">红方</option><option value="black">黑方</option></select></label></div><div id="pikafish-lines" class="engine-lines"></div><p class="engine-footnote">默认使用 Pikafish 单主线搜索、可用 CPU 线程（最多 8）和 256 MiB 哈希表；最强档搜索至 30 层。首次加载需下载 NNUE 网络。</p>`;
   $('.game-sidebar').prepend(panel);
   renderEngineLines();
 }
@@ -780,7 +780,6 @@ function bindEvents() {
     else if (state.pikafish?.ready) void requestPikafishAnalysis();
   });
   $('#mode-select').addEventListener('change', () => { resetEngineAnalyses(); state.board = initialBoard(); state.side = RED; state.history = []; state.gameOver = false; state.adjudication = null; renderPlayBoard(); saveGame(); if ($('#mode-select').value === 'ai' && $('#side-select').value === 'black') scheduleAiMove(); else if (state.pikafish?.ready) void requestPikafishAnalysis(); });
-  $('#strength-select').addEventListener('change', saveGame);
   $('#side-select').addEventListener('change', () => { if ($('#mode-select').value === 'ai') { resetEngineAnalyses(); state.board = initialBoard(); state.side = RED; state.history = []; state.gameOver = false; state.adjudication = null; renderPlayBoard(); saveGame(); if ($('#side-select').value === 'black') scheduleAiMove(); else if (state.pikafish?.ready) void requestPikafishAnalysis(); } });
   $('#pikafish-start').addEventListener('click', startPikafish);
   $('#pikafish-analyze').addEventListener('click', analyzePikafish);
@@ -806,9 +805,6 @@ function openSettings() {
 async function initialize() {
   document.querySelector('[data-view="study"]').textContent = '棋谱复盘';
   document.querySelector('[data-view="play"]').textContent = 'AI 研究与对弈';
-  [...$('#strength-select').options].forEach((option, index) => { option.textContent = ['快速本地搜索', '标准本地搜索', '深度本地搜索', '本地搜索上限'][index]; });
-  $('.disclaimer').textContent = '已加载 Pikafish 时，AI 对弈优先使用引擎；否则使用未经基准认证的本地搜索。外部 API 只提供分析建议。';
-  $('#strength-select').value = 'max';
   bindEvents();
   try {
     const response = await fetch('./data/records/modern-games.json');
@@ -819,7 +815,7 @@ async function initialize() {
     const savedGame = await recordRepository.getState('active-game');
     if (savedGame?.board?.length === 90 && Array.isArray(savedGame.history)) {
       state.board = savedGame.board; state.side = savedGame.side; state.history = savedGame.history; state.gameOver = savedGame.gameOver; state.adjudication = savedGame.adjudication ?? null;
-      $('#mode-select').value = savedGame.mode ?? 'ai'; $('#side-select').value = savedGame.userSide ?? 'red'; $('#strength-select').value = savedGame.strength ?? 'max';
+      $('#mode-select').value = savedGame.mode ?? 'ai'; $('#side-select').value = savedGame.userSide ?? 'red';
     }
   } catch { $('#storage-status').textContent = '本地存储不可用'; }
   await refreshRecords();

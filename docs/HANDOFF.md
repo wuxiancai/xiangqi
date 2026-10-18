@@ -251,3 +251,13 @@
 - 修正影响棋力的默认参数：官方说明 MultiPV 设为 1 性能最佳；AI 应手及常规分析默认单主线，默认深度提高到 30；设置 Threads 为硬件并发数（1–8），Hash 设为 256 MiB。官方引擎默认没有启用强度限制。
 - 更新引擎模块 URL 与 Service Worker shell 缓存版本，避免旧浏览器缓存继续使用原默认值。未运行测试或重新构建；已安装 Docker 且构建产物、固定源码提交与 NNUE 哈希存在，但本轮未通过浏览器重新实测对局速度/棋力。强度仍未经过对局基准认证。
 - Pikafish 官方说明：UCI 是推荐 GUI 接口；Threads 应按可用核心配置，MultiPV=1 有最佳性能，EvalFile 必须对应有效 NNUE。资料：[官方 Pikafish README](https://github.com/official-pikafish/Pikafish)、[官方 UCI 文档](https://github.com/official-pikafish/Pikafish/wiki/UCI-%26-Commands)、[Pikafish WebAssembly 构建参考](https://github.com/brianhliou/pikafish-wasm)。
+# 2026-10-17 对弈选项并入 Pikafish 面板
+
+- 删除“对弈设置”整个侧栏区块及 AI 强度下拉；将“对弈模式”和“你执哪方”放在 Pikafish 深度选择之后，桌面/窄屏均双列排列。
+- 移除强度选择器的初始化、保存与事件引用；引擎不可用时的本地回退固定使用本地搜索上限。旧保存对局的 strength 字段被忽略，模式/执方继续读写原字段。
+- 提醒：未运行测试。`tests/ui.test.js` 中旧的“设置区块仍在侧栏”断言现已过时，需随本次 UI 改版更新后再运行测试。已更新 Service Worker 缓存至 v62。
+# 2026-10-18 v1.0 云服务器部署端口
+
+- 将本版定义为 v1.0：`package.json` 使用 SemVer `1.0.0`，页面页脚、部署启动日志和 systemd 描述标记 `v1.0`。
+- 部署脚本从起始端口（默认 8000，可由 `PORT` 指定）探测首个空闲端口，配置 systemd/launchd/Windows 计划任务并打印访问端口。服务启动时再次从配置端口起递增绑定，以覆盖部署探测后的端口竞争；直接运行服务也支持该顺延行为。
+- Service Worker shell 缓存升至 v63。尚未实际部署云服务器或运行测试；需在目标 Linux 主机执行 `sudo python3 scripts/deploy.py`，并按输出端口配置防火墙/反向代理。`git diff --check` 待本轮收尾执行。

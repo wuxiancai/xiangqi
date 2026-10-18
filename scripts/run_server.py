@@ -3,6 +3,7 @@
 import os
 import sys
 import venv
+import argparse
 from pathlib import Path
 
 
@@ -13,6 +14,9 @@ PORT = os.environ.get("PORT", "8000")
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--port", type=int, default=int(PORT))
+    os.environ["PORT"] = str(parser.parse_args().port)
     if not PYTHON.exists():
         venv.EnvBuilder(with_pip=False).create(ENV)
     os.execv(str(PYTHON), [str(PYTHON), str(ROOT / "scripts" / "app_server.py")])
