@@ -1,5 +1,5 @@
-const CACHE_NAME = 'chuhe-shell-v63';
-const APP_SHELL = ['./', './index.html', './styles.css', './styles-import.css', './src/app.js', './src/audio.js?v=check-voice-1', './src/importer.js', './src/xqf.js', './src/cbl.js', './src/rules.js', './src/notation.js', './src/repetition.js', './src/storage.js', './src/ai.js', './src/ai-worker.js', './engine/pikafish/engine.js?v=full-strength-default-1', './data/records/modern-games.json'];
+const CACHE_NAME = 'chuhe-shell-v78';
+const APP_SHELL = ['./', './index.html', './styles.css', './styles-import.css', './src/app.js', './src/audio.js?v=capture-voice-2', './src/importer.js', './src/xqf.js', './src/cbl.js', './src/rules.js', './src/notation.js', './src/repetition.js', './src/storage.js', './src/ai.js', './src/ai-worker.js', './engine/pikafish/engine.js?v=secure-context-diagnostics-1', './data/records/modern-games.json'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));

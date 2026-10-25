@@ -19,14 +19,25 @@ export function playMoveSound(audio, captured = false, side = 'red') {
 }
 
 export function playCheckSound(speech = globalThis.speechSynthesis, Utterance = globalThis.SpeechSynthesisUtterance) {
+  speakChinese(speech, Utterance, '将军');
+}
+
+export function playCaptureSpeech(speech = globalThis.speechSynthesis, Utterance = globalThis.SpeechSynthesisUtterance) {
+  speakChinese(speech, Utterance, '吃');
+}
+
+export function playTacticSpeech(phrase, speech = globalThis.speechSynthesis, Utterance = globalThis.SpeechSynthesisUtterance) {
+  speakChinese(speech, Utterance, phrase);
+}
+
+function speakChinese(speech, Utterance, phrase) {
   if (!speech || !Utterance) return;
-  const utterance = new Utterance('将军');
+  const utterance = new Utterance(phrase);
   utterance.lang = 'zh-CN';
   utterance.rate = 1;
   utterance.pitch = 1;
   utterance.volume = 1;
   utterance.voice = speech.getVoices?.().find((voice) => /^zh(?:[-_]|$)/i.test(voice.lang)) ?? null;
-  speech.cancel?.();
   speech.speak(utterance);
 }
 

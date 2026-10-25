@@ -56,6 +56,13 @@
 .last-move-destination{fill:none;stroke:#fff;stroke-width:2;stroke-dasharray:9 5;opacity:.98;filter:drop-shadow(0 0 1.5px #fff)}
 @keyframes chess-ring-spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.threat-ring,.selected-piece-ring,.last-move-origin-ring,.last-move-origin,.last-move-destination{animation:none}}
+
+/* Learning hints: green destinations are safe; red destinations can be captured. */
+.legal-dot{fill:#35f05b;fill-opacity:.2;stroke:#16b843;stroke-width:2.5;filter:drop-shadow(0 0 4px #39f05ecc);opacity:1}
+.legal-dot.unsafe{fill:#ff3737;fill-opacity:.23;stroke:#ed2424;filter:drop-shadow(0 0 4px #ff2929cc)}
+.threat-ring.exposed{fill:#3dff58;fill-opacity:.26;stroke:#28e542;stroke-width:2.5;stroke-dasharray:none;filter:drop-shadow(0 0 5px #2cff55) drop-shadow(0 0 9px #2cff5577)}
+.threat-ring.protected{fill:#ff3c32;fill-opacity:.18;stroke:#f02c27;stroke-width:2.2;stroke-dasharray:7 4;filter:drop-shadow(0 0 3px #ff383877)}
+.threat-ring.exposed{animation:none}
 .analysis-arrow{pointer-events:none;--arrow-color:#f02b22;opacity:1}
 .analysis-arrow.black{--arrow-color:#3983b5}
 .analysis-arrow .arrow-visible{fill:none;stroke:var(--arrow-color);stroke-width:6;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 2px #fff) drop-shadow(0 1px 1px #3b2412);pointer-events:none}

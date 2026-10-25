@@ -3,7 +3,7 @@ import { chooseLocalMoveAsync, requestSuggestion } from './ai.js';
 import { loadSettings, recordRepository, saveSettings } from './storage.js';
 import { chineseNotation } from './notation.js';
 import { adjudicateRepetition } from './repetition.js';
-import { playCheckSound, playMoveSound } from './audio.js?v=check-voice-1';
+import { playCaptureSpeech, playCheckSound, playMoveSound, playTacticSpeech } from './audio.js?v=capture-voice-2';
 import { convertTextToRecord, extractText, findExistingImportedRecord, importXqfFolderFiles, MAX_IMPORT_SIZE } from './importer.js';
 import { parseXqf, xqfMovesAsText } from './xqf.js';
 import { cblMovesAsText, parseCbl } from './cbl.js';
@@ -49,7 +49,7 @@ function renderBoard(svg, board, flipped, onSquare, selected = null, hints = [],
   svg.replaceChildren();
   const prefix = svg.id;
   const defs = svgElement('defs');
-  defs.innerHTML = `<linearGradient id="${prefix}-wood" x2="0" y2="1"><stop stop-color="#dbb77c"/><stop offset=".48" stop-color="#cba36a"/><stop offset="1" stop-color="#d9b77f"/></linearGradient><radialGradient id="${prefix}-red-face" cx="30%" cy="17%" r="86%"><stop stop-color="#fffdf4"/><stop offset=".48" stop-color="#f8e8ca"/><stop offset=".78" stop-color="#d9ae70"/><stop offset="1" stop-color="#a66d37"/></radialGradient><radialGradient id="${prefix}-black-face" cx="30%" cy="17%" r="86%"><stop stop-color="#fffdf4"/><stop offset=".48" stop-color="#f8e8ca"/><stop offset=".78" stop-color="#d9ae70"/><stop offset="1" stop-color="#a66d37"/></radialGradient><linearGradient id="${prefix}-gold-rim" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff9dc"/><stop offset=".22" stop-color="#f4d995"/><stop offset=".48" stop-color="#c18b49"/><stop offset=".68" stop-color="#fff0c0"/><stop offset=".88" stop-color="#9a632f"/><stop offset="1" stop-color="#f1d08a"/></linearGradient><linearGradient id="${prefix}-piece-side" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#e7c580"/><stop offset=".34" stop-color="#b47a3d"/><stop offset="1" stop-color="#714522"/></linearGradient><filter id="${prefix}-piece-shadow" x="-50%" y="-50%" width="210%" height="230%"><feGaussianBlur in="SourceAlpha" stdDeviation="3.5"/><feOffset dy="4"/><feComponentTransfer><feFuncA type="linear" slope=".48"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter><filter id="${prefix}-threat-glow" x="-70%" y="-70%" width="240%" height="240%"><feGaussianBlur stdDeviation="2.6" result="blur"/><feFlood flood-color="#e34b35" flood-opacity=".78"/><feComposite in2="blur" operator="in"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter><marker id="${prefix}-analysis-arrow-red" markerWidth="16" markerHeight="16" refX="16" refY="8" orient="auto" markerUnits="userSpaceOnUse"><path d="M 0 0 L 16 8 L 0 16 z" fill="#f02b22"/></marker><marker id="${prefix}-analysis-arrow-black" markerWidth="16" markerHeight="16" refX="16" refY="8" orient="auto" markerUnits="userSpaceOnUse"><path d="M 0 0 L 16 8 L 0 16 z" fill="#3983b5"/></marker>`;
+  defs.innerHTML = `<linearGradient id="${prefix}-wood" x2="0" y2="1"><stop stop-color="#dbb77c"/><stop offset=".48" stop-color="#cba36a"/><stop offset="1" stop-color="#d9b77f"/></linearGradient><radialGradient id="${prefix}-red-face" cx="30%" cy="17%" r="86%"><stop stop-color="#fffdf4"/><stop offset=".48" stop-color="#f8e8ca"/><stop offset=".78" stop-color="#d9ae70"/><stop offset="1" stop-color="#a66d37"/></radialGradient><radialGradient id="${prefix}-black-face" cx="30%" cy="17%" r="86%"><stop stop-color="#fffdf4"/><stop offset=".48" stop-color="#f8e8ca"/><stop offset=".78" stop-color="#d9ae70"/><stop offset="1" stop-color="#a66d37"/></radialGradient><linearGradient id="${prefix}-gold-rim" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff9dc"/><stop offset=".22" stop-color="#f4d995"/><stop offset=".48" stop-color="#c18b49"/><stop offset=".68" stop-color="#fff0c0"/><stop offset=".88" stop-color="#9a632f"/><stop offset="1" stop-color="#f1d08a"/></linearGradient><linearGradient id="${prefix}-piece-side" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#e7c580"/><stop offset=".34" stop-color="#b47a3d"/><stop offset="1" stop-color="#714522"/></linearGradient><filter id="${prefix}-piece-shadow" x="-50%" y="-50%" width="210%" height="230%"><feGaussianBlur in="SourceAlpha" stdDeviation="3.5"/><feOffset dy="4"/><feComponentTransfer><feFuncA type="linear" slope=".48"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter><filter id="${prefix}-threat-glow" x="-70%" y="-70%" width="240%" height="240%"><feGaussianBlur stdDeviation="2.6" result="blur"/><feFlood flood-color="#50ff70" flood-opacity=".9"/><feComposite in2="blur" operator="in"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter><marker id="${prefix}-analysis-arrow-red" markerWidth="16" markerHeight="16" refX="16" refY="8" orient="auto" markerUnits="userSpaceOnUse"><path d="M 0 0 L 16 8 L 0 16 z" fill="#f02b22"/></marker><marker id="${prefix}-analysis-arrow-black" markerWidth="16" markerHeight="16" refX="16" refY="8" orient="auto" markerUnits="userSpaceOnUse"><path d="M 0 0 L 16 8 L 0 16 z" fill="#3983b5"/></marker>`;
   svg.append(defs);
   svg.append(svgElement('rect', { x: 0, y: 0, width: 500, height: 550, rx: 8, class: 'board-background', fill: `url(#${prefix}-wood)` }));
   const lines = svgElement('g', { class: 'board-lines' });
@@ -90,12 +90,12 @@ function renderBoard(svg, board, flipped, onSquare, selected = null, hints = [],
   }
   for (let square = 0; square < 90; square += 1) {
     const { file, rank } = mapSquare(square, flipped); const { x, y } = point(file, rank);
-    if (hints.some((move) => move.to === square)) svg.append(svgElement('circle', { cx: x, cy: y, r: 7, class: 'legal-dot' }));
+    const hint = hints.find((move) => move.to === square);
     const piece = board[square];
     const threatStatus = threatened.get(square);
     if (piece) {
       const side = sideOf(piece);
-      if (threatStatus) svg.append(svgElement('circle', { cx: x, cy: y, r: 25, class: `threat-ring ${threatStatus}` }));
+      if (threatStatus) svg.append(svgElement('circle', { cx: x, cy: y, r: 27, class: `threat-ring ${threatStatus}` }));
       svg.append(svgElement('circle', { cx: x, cy: y + 5, r: 25, class: 'piece-shadow', filter: `url(#${prefix}-piece-shadow)` }));
       svg.append(svgElement('circle', { cx: x, cy: y + 3.2, r: 23, class: 'piece-side', fill: `url(#${prefix}-piece-side)` }));
       svg.append(svgElement('circle', { cx: x, cy: y, r: 23, class: `piece-rim ${side}`, fill: `url(#${prefix}-gold-rim)` }));
@@ -104,6 +104,7 @@ function renderBoard(svg, board, flipped, onSquare, selected = null, hints = [],
       const text = svgElement('text', { x, y: y + 0.2, class: `piece-label ${side}` }); text.textContent = labels[piece]; svg.append(text);
       svg.append(svgElement('path', { d: `M ${x - 12} ${y - 15} Q ${x - 5} ${y - 21} ${x + 5} ${y - 18}`, class: `piece-glint ${side}` }));
     }
+    if (hint) svg.append(svgElement('circle', { cx: x, cy: y, r: piece ? 25 : 18, class: `legal-dot ${hint.unsafe ? 'unsafe' : 'safe'}` }));
     if (square === selected) svg.append(svgElement('circle', { cx: x, cy: y, r: 25, class: 'selected-piece-ring' }));
     if (lastMove?.from === square) {
       svg.append(svgElement('circle', { cx: x, cy: y, r: 8, class: 'last-move-origin-ring' }));
@@ -483,7 +484,13 @@ function renderPlayBoard() {
   const status = gameStatus(state.board, state.side);
   const analysis = state.engineAnalyses[state.side];
   const arrows = analysis?.position === positionKey(state.board, state.side) ? engineCandidateMoves(analysis.lines, analysis.board, analysis.side ?? state.side).slice(0, 1).map(({ move, notation }) => ({ ...move, side: state.side, notation })) : [];
-  renderBoard($('#play-board'), state.board, state.playFlipped, onPlaySquare, state.selectedSquare ?? null, state.selectedSquare == null ? [] : legalMoves(state.board, state.side).filter((move) => move.from === state.selectedSquare), last, pieceThreatStatus(state.board), arrows);
+  const hints = state.selectedSquare == null ? [] : legalMoves(state.board, state.side)
+    .filter((move) => move.from === state.selectedSquare)
+    .map((move) => {
+      const after = applyMove(state.board, move);
+      return { ...move, unsafe: legalMoves(after, otherSide(state.side)).some((reply) => reply.to === move.to) };
+    });
+  renderBoard($('#play-board'), state.board, state.playFlipped, onPlaySquare, state.selectedSquare ?? null, hints, last, pieceThreatStatus(state.board), arrows);
   const endStatus = state.adjudication ?? status;
   const endReason = state.adjudication ? '长将判负' : status.reason;
   $('#turn-label').textContent = state.gameOver ? `${names[endStatus.winner]}胜 · ${endReason}` : `${names[state.side]}走棋${status.inCheck ? ' · 将军' : ''}`;
@@ -543,13 +550,24 @@ async function onPlaySquare(square) {
 
 async function playMove(move) {
   const captured = state.board[move.to];
+  const mover = state.side;
   playMoveSound(moveAudio, Boolean(captured), state.side);
+  if (captured) playCaptureSpeech();
   const previousBoard = state.board;
   state.board = applyMove(state.board, move);
   state.history.push({ move, captured, previousBoard, previousSide: state.side });
   state.side = otherSide(state.side); state.selectedSquare = null;
   const status = gameStatus(state.board, state.side);
   if (status.inCheck) playCheckSound();
+  const tacticalTargets = [...new Set(legalMoves(state.board, mover)
+    .filter((candidate) => state.board[candidate.to] && sideOf(state.board[candidate.to]) !== mover)
+    .map((candidate) => candidate.to))];
+  if (status.inCheck && tacticalTargets.length) {
+    const priority = { R: 5, C: 4, H: 3, E: 2, A: 2, P: 1, K: 0 };
+    const target = tacticalTargets.map((square) => state.board[square]).sort((a, b) => priority[kindOf(b)] - priority[kindOf(a)])[0];
+    playTacticSpeech(`抽${labels[target]}`);
+  } else if (tacticalTargets.length >= 3) playTacticSpeech('捉三');
+  else if (tacticalTargets.length >= 2) playTacticSpeech('捉双');
   const initialPosition = state.history[0];
   const trace = [{ key: `${initialPosition.previousBoard.map((piece) => piece ?? '.').join('')}:${initialPosition.previousSide}` }];
   for (const entry of state.history) {
