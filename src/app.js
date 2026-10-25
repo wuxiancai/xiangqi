@@ -95,7 +95,7 @@ function renderBoard(svg, board, flipped, onSquare, selected = null, hints = [],
     const threatStatus = threatened.get(square);
     if (piece) {
       const side = sideOf(piece);
-      if (threatStatus) svg.append(svgElement('circle', { cx: x, cy: y, r: 27, class: `threat-ring ${threatStatus}` }));
+      if (threatStatus === 'exposed') svg.append(svgElement('circle', { cx: x, cy: y, r: 27, class: 'threat-ring exposed' }));
       svg.append(svgElement('circle', { cx: x, cy: y + 5, r: 25, class: 'piece-shadow', filter: `url(#${prefix}-piece-shadow)` }));
       svg.append(svgElement('circle', { cx: x, cy: y + 3.2, r: 23, class: 'piece-side', fill: `url(#${prefix}-piece-side)` }));
       svg.append(svgElement('circle', { cx: x, cy: y, r: 23, class: `piece-rim ${side}`, fill: `url(#${prefix}-gold-rim)` }));
@@ -111,7 +111,7 @@ function renderBoard(svg, board, flipped, onSquare, selected = null, hints = [],
       svg.append(svgElement('circle', { cx: x, cy: y, r: 3.5, class: 'last-move-origin' }));
     }
     if (lastMove?.to === square) svg.append(svgElement('circle', { cx: x, cy: y, r: 25, class: 'last-move-destination' }));
-    const threatDescription = threatStatus === 'protected' ? '，受到己方保护' : threatStatus === 'exposed' ? '，无保护且可能被吃' : '';
+    const threatDescription = threatStatus === 'exposed' ? '，无保护且可能被吃' : '';
     const hit = svgElement('rect', { x: x - 26, y: y - 26, width: 52, height: 52, class: 'board-hit', tabindex: '0', role: 'gridcell', 'aria-label': `${toICCS(square)}${piece ? ` ${labels[piece]}${threatDescription}` : ''}` });
     hit.dataset.square = String(square); svg.append(hit);
   }
