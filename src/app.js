@@ -104,7 +104,7 @@ function renderBoard(svg, board, flipped, onSquare, selected = null, hints = [],
       const text = svgElement('text', { x, y: y + 0.2, class: `piece-label ${side}` }); text.textContent = labels[piece]; svg.append(text);
       svg.append(svgElement('path', { d: `M ${x - 12} ${y - 15} Q ${x - 5} ${y - 21} ${x + 5} ${y - 18}`, class: `piece-glint ${side}` }));
     }
-    if (hint) svg.append(svgElement('circle', { cx: x, cy: y, r: piece ? 25 : 18, class: `legal-dot ${hint.unsafe ? 'unsafe' : 'safe'}` }));
+    if (hint) svg.append(svgElement('circle', { cx: x, cy: y, r: (piece ? 25 : 18) / 8, class: `legal-dot ${hint.unsafe ? 'unsafe' : 'safe'}` }));
     if (square === selected) svg.append(svgElement('circle', { cx: x, cy: y, r: 25, class: 'selected-piece-ring' }));
     if (lastMove?.from === square) {
       svg.append(svgElement('circle', { cx: x, cy: y, r: 8, class: 'last-move-origin-ring' }));
