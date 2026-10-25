@@ -560,7 +560,7 @@ async function playMove(move) {
   const status = gameStatus(state.board, state.side);
   if (status.inCheck) playCheckSound();
   const tacticalTargets = [...new Set(legalMoves(state.board, mover)
-    .filter((candidate) => state.board[candidate.to] && sideOf(state.board[candidate.to]) !== mover)
+    .filter((candidate) => candidate.from === move.to && state.board[candidate.to] && sideOf(state.board[candidate.to]) !== mover)
     .map((candidate) => candidate.to))];
   if (status.inCheck && tacticalTargets.length) {
     const priority = { R: 5, C: 4, H: 3, E: 2, A: 2, P: 1, K: 0 };
