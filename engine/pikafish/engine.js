@@ -68,6 +68,92 @@ const asset = (name, version = '') => {
   if (version) url.searchParams.set('v', version);
   return url.href;
 };
+const UPDATE_FEED = 'https://raw.githubusercontent.com/wuxiancai/xiangqi/engine-updates/manifest.json';
+
+async function sha256(bytes) {
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+async function loadEngineAssets() {
+  let localVersion = null;
+  try {
+    const response = await fetch(asset('version.json'), { cache: 'no-store' });
+    if (response.ok) localVersion = await response.json();
+  } catch {}
+
+  let latest = null;
+  let latestError = null;
+  try {
+    const response = await fetch(UPDATE_FEED, { cache: 'no-store' });
+    if (!response.ok) throw new Error(`版本清单 HTTP ${response.status}`);
+    latest = await response.json();
+    if (latest.schema !== 'chuhe-pikafish/v1' || latest.engine_api !== 1 || !latest.base_url || !latest.assets) {
+      throw new Error('版本清单格式不受支持');
+    }
+    if (latest.commit === localVersion?.commit && latest.net_sha256 === localVersion?.net_sha256) {
+      return localAssets(localVersion);
+    }
+    return await manifestAssets(latest);
+  } catch (error) {
+    latestError = error;
+  }
+  if (latest?.fallback) {
+    try { return await manifestAssets(latest.fallback); }
+    catch (fallbackError) { latestError = new Error(`${latestError.message}；回退版本也不可用：${fallbackError.message}`); }
+  }
+  if (localVersion) return localAssets(localVersion);
+  throw new Error(`无法检查或下载最新 Pikafish：${latestError?.message ?? '版本服务不可用'}`);
+}
+
+async function manifestAssets(manifest) {
+  if (!manifest.base_url || !manifest.assets) throw new Error('引擎版本清单缺少资源地址');
+  const base = new URL(manifest.base_url);
+  if (base.origin !== 'https://raw.githubusercontent.com' || !base.pathname.startsWith('/wuxiancai/xiangqi/engine-updates/releases/')) {
+    throw new Error('引擎资源必须来自项目官方 Raw CDN');
+  }
+  const wasmUrl = verifiedAssetUrl(manifest.base_url, 'pikafish.wasm', manifest.assets['pikafish.wasm']);
+  const netUrl = verifiedAssetUrl(manifest.base_url, 'pikafish.nnue', manifest.assets['pikafish.nnue']);
+  const js = await verifiedScript(manifest.base_url, manifest.assets['pikafish.js']);
+  return {
+    version: manifest,
+    jsUrl: js,
+    wasmUrl,
+    wasmSha256: manifest.assets['pikafish.wasm']?.sha256,
+    netUrl,
+    netSha256: manifest.assets['pikafish.nnue']?.sha256,
+  };
+}
+
+function verifiedAssetUrl(baseUrl, filename, descriptor) {
+  if (!/^[a-f0-9]{64}$/i.test(descriptor?.sha256 ?? '')) throw new Error(`引擎清单缺少有效的 ${filename} SHA-256`);
+  const url = new URL(filename, baseUrl);
+  url.searchParams.set('sha256', descriptor.sha256);
+  return url.href;
+}
+
+async function verifiedScript(baseUrl, descriptor) {
+  const url = verifiedAssetUrl(baseUrl, 'pikafish.js', descriptor);
+  const response = await fetch(url, { cache: 'force-cache' });
+  if (!response.ok) throw new Error(`引擎脚本 HTTP ${response.status}`);
+  const bytes = await response.arrayBuffer();
+  if (await sha256(bytes) !== descriptor.sha256) throw new Error('引擎脚本 SHA-256 校验失败');
+  return URL.createObjectURL(new Blob([bytes], { type: 'text/javascript' }));
+}
+
+function localAssets(version) {
+  const cacheVersion = version?.commit
+    ? `${version.commit.slice(0, 12)}-${(version.net_sha256 || '').slice(0, 12)}`
+    : `local-${Date.now()}`;
+  return {
+    version,
+    jsUrl: asset('pikafish.js', cacheVersion),
+    wasmUrl: asset('pikafish.wasm', cacheVersion),
+    wasmSha256: null,
+    netUrl: asset('pikafish.nnue', cacheVersion),
+    netSha256: version?.net_sha256,
+  };
+}
 
 export class PikafishEngine {
   constructor(onUpdate = () => {}) {
@@ -79,22 +165,38 @@ export class PikafishEngine {
     this.analysisId = 0;
     this.lines = [];
     this.version = null;
+    this.objectUrls = [];
   }
 
   async start() {
     if (globalThis.crossOriginIsolated !== true) return Promise.reject(new Error('当前站点未启用 COOP/COEP，无法启动多线程引擎；请使用项目自托管服务或配置隔离响应头'));
     if (this.worker) return this.ready ? Promise.resolve() : Promise.reject(new Error('Pikafish 正在初始化'));
-    const requiredAssets = ['worker.js', 'pikafish.js', 'pikafish.wasm', 'pikafish.nnue'];
-    const versionResponse = await fetch(asset('version.json'), { cache: 'no-store' });
-    if (versionResponse.ok) this.version = await versionResponse.json();
-    const cacheVersion = this.version?.commit
-      ? `${this.version.commit.slice(0, 12)}-${(this.version.net_sha256 || '').slice(0, 12)}`
-      : `uncached-${Date.now()}`;
-    return Promise.all(requiredAssets.map(async (name) => {
-      const response = await fetch(asset(name, cacheVersion), { method: 'HEAD', cache: 'no-store' });
-      if (!response.ok) throw new Error(`引擎资源 ${name} 不可用（HTTP ${response.status}）；请先运行 bash engine/pikafish/build.sh`);
-    })).then(() => new Promise((resolve, reject) => {
-      const worker = new Worker(asset('worker.js', cacheVersion));
+    const assets = await loadEngineAssets();
+    const workerUrl = new URL('./worker.js?v=engine-cdn-1', import.meta.url);
+    const workerResponse = await fetch(workerUrl, { method: 'HEAD', cache: 'no-store' });
+    if (!workerResponse.ok) throw new Error(`引擎 Worker 不可用（HTTP ${workerResponse.status}）`);
+    this.version = assets.version;
+    if (assets.jsUrl.startsWith('blob:')) this.objectUrls.push(assets.jsUrl);
+    try {
+      await this.#startWorker(workerUrl, assets);
+    } catch (error) {
+      if (!assets.version?.fallback) throw error;
+      this.worker?.terminate(); this.worker = null; this.ready = false;
+      if (assets.jsUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(assets.jsUrl);
+        this.objectUrls = this.objectUrls.filter((url) => url !== assets.jsUrl);
+      }
+      this.onUpdate({ type: 'status', text: '最新引擎校验或启动失败，正在回退上一版本…' });
+      const fallback = await manifestAssets(assets.version.fallback);
+      this.version = fallback.version;
+      if (fallback.jsUrl.startsWith('blob:')) this.objectUrls.push(fallback.jsUrl);
+      await this.#startWorker(workerUrl, fallback);
+    }
+  }
+
+  #startWorker(workerUrl, assets) {
+    return new Promise((resolve, reject) => {
+      const worker = new Worker(workerUrl);
       this.worker = worker;
       const timer = setTimeout(() => reject(new Error('引擎初始化超时')), 120000);
       worker.onmessage = ({ data }) => {
@@ -189,6 +291,8 @@ export class PikafishEngine {
     this.ready = false;
     this.pending = null;
     this.queued = null;
+    for (const url of this.objectUrls) URL.revokeObjectURL(url);
+    this.objectUrls = [];
   }
 
 }

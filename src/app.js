@@ -7,7 +7,8 @@ import { playCaptureSpeech, playCheckSound, playMoveSound, playTacticSpeech } fr
 import { convertTextToRecord, extractText, findExistingImportedRecord, importXqfFolderFiles, MAX_IMPORT_SIZE, normalizeLegacyImportedRecord } from './importer.js';
 import { parseXqf, xqfMovesAsText } from './xqf.js';
 import { cblMovesAsText, parseCbl } from './cbl.js';
-import { engineMoveToICCS, formatRedEvaluation, PikafishEngine } from '../engine/pikafish/engine.js?v=secure-context-diagnostics-1';
+import { engineMoveToICCS, formatRedEvaluation, PikafishEngine } from '../engine/pikafish/engine.js?v=engine-cdn-1';
+import { checkMobileAppUpdate } from './mobile-updater.js?v=1';
 
 const categories = ['古谱', '现代对局', '开局', '中局', '残局'];
 const sourceCategoryRoots = {
@@ -876,6 +877,7 @@ async function initialize() {
     navigator.serviceWorker.register('./service-worker.js', { updateViaCache: 'none' }).catch(() => {});
   }
   void startPikafish({ automatic: true });
+  void checkMobileAppUpdate();
 }
 
 initialize();

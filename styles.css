@@ -170,3 +170,9 @@ button:active,.import-button:active{transform:translateY(1px)}
 @media(max-width:960px){.play-layout{grid-template-columns:minmax(0,1fr) minmax(290px,330px);gap:14px}.play-board-column{padding:14px}.play-board-column .board-frame{width:min(100%,calc(100vh - 300px))}}
 @media(max-width:720px){.play-layout{display:flex;flex-direction:column;gap:12px}.play-board-column{width:100%;padding:11px 8px 13px;border-radius:12px}.play-board-column .board-frame{width:min(100%,calc(100vw - 40px));min-width:0;padding:6px}.game-sidebar{width:100%;grid-template-columns:1fr}.engine-panel,.history-panel{padding:14px}.engine-toolbar button{min-height:44px}.engine-line{min-height:44px}.board-legend{flex-wrap:wrap}}
 @media(max-width:390px){.app-shell{padding:0 10px}.play-board-column .board-frame{width:min(100%,calc(100vw - 34px))}.board-header{font-size:11px}.play-board-column{padding:9px 6px}.play-board-column .board-header>div{gap:5px}.red-evaluation{font-size:9px}.engine-line{gap:5px;padding:6px 7px}.engine-line strong{font-size:11px}}
+.mobile-update-dialog{width:min(380px,calc(100% - 32px));border:1px solid #dfd7c5;border-radius:16px;padding:23px;background:#fffdf8;color:#30372f;box-shadow:0 24px 70px #1d251f44}
+.mobile-update-dialog::backdrop{background:#18211988;backdrop-filter:blur(2px)}
+.mobile-update-dialog h2{margin:0;font-family:'Noto Serif SC',serif;font-size:18px;font-weight:650}
+.mobile-update-dialog p{margin:12px 0 21px;color:#687269;font-size:13px;line-height:1.75;overflow-wrap:anywhere}
+.mobile-update-actions{display:flex;justify-content:flex-end;gap:9px}
+.mobile-update-actions .primary-button,.mobile-update-actions .secondary-button{display:inline-flex;min-height:40px;align-items:center;justify-content:center;padding:0 14px;border-radius:8px;font-size:12px;text-decoration:none}

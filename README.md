@@ -16,6 +16,8 @@ Linux（必须有 systemd）：`sudo python3 scripts/deploy.py`。macOS 使用 l
 
 Linux systemd 服务模板位于 `deploy/xiangqi.service`，部署脚本会按上传目录、运行用户和端口生成服务单元。`scripts/run_server.py` 可用于本机临时运行，但生产部署应使用 `deploy.py`，以确保服务受 systemd/launchd/任务计划管理。
 
+GitHub Actions 每日检查 Pikafish 官方发行版与 NNUE 更新，在 CI runner 上使用 Emscripten 构建并发布版本化引擎文件。项目服务器无需 Docker；网页从公开版本清单自动下载新引擎。手机 App 的整包更新采用版本提示和用户手动下载安装包。
+
 ## 验证
 
 ```sh

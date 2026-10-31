@@ -1,0 +1,52 @@
+name: Update Pikafish engine assets
+
+on:
+  push:
+    paths:
+      - '.github/workflows/pikafish-release.yml'
+      - 'engine/pikafish/**'
+      - 'scripts/publish_pikafish.py'
+  workflow_dispatch:
+  schedule:
+    - cron: '37 3 * * *'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pikafish-release
+  cancel-in-progress: false
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check official engine and network versions
+        id: upstream
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: python3 scripts/publish_pikafish.py check
+      - name: Install Emscripten SDK
+        if: steps.upstream.outputs.update == 'true'
+        run: |
+          git clone --depth 1 https://github.com/emscripten-core/emsdk.git "$RUNNER_TEMP/emsdk"
+          "$RUNNER_TEMP/emsdk/emsdk" install 3.1.74
+          "$RUNNER_TEMP/emsdk/emsdk" activate 3.1.74
+      - name: Build and validate WebAssembly engine
+        if: steps.upstream.outputs.update == 'true'
+        env:
+          PIKAFISH_REV: ${{ steps.upstream.outputs.commit }}
+          PIKAFISH_VERSION: ${{ steps.upstream.outputs.version }}
+          PIKAFISH_NET_URL: ${{ steps.upstream.outputs.net_url }}
+          PIKAFISH_NET_SHA256: ${{ steps.upstream.outputs.net_sha256 }}
+        run: |
+          source "$RUNNER_TEMP/emsdk/emsdk_env.sh"
+          bash engine/pikafish/build.sh
+          python3 scripts/publish_pikafish.py manifest
+      - name: Publish versioned files and manifest to the CORS-enabled raw CDN
+        if: steps.upstream.outputs.update == 'true'
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 scripts/publish_pikafish.py publish

@@ -9,11 +9,22 @@
 
 let command = null;
 
-async function fetchNet(url) {
-  const response = await fetch(url);
-  if (!response.ok) throw new Error(`net fetch failed: ${response.status}`);
+async function verifySha256(bytes, expected, label) {
+  if (!expected) return;
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  const actual = [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+  if (actual !== expected) throw new Error(`${label} SHA-256 校验失败`);
+}
+
+async function fetchNet(url, expectedSha256) {
+  const response = await fetch(url, { cache: 'force-cache' });
+  if (!response.ok) throw new Error(`NNUE 下载失败：HTTP ${response.status}`);
   const total = Number(response.headers.get('content-length')) || 0;
-  if (!response.body) return new Uint8Array(await response.arrayBuffer());
+  if (!response.body) {
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    await verifySha256(bytes, expectedSha256, 'NNUE');
+    return bytes;
+  }
   const reader = response.body.getReader();
   const chunks = [];
   let loaded = 0;
@@ -30,6 +41,15 @@ async function fetchNet(url) {
     bytes.set(chunk, offset);
     offset += chunk.byteLength;
   }
+  await verifySha256(bytes, expectedSha256, 'NNUE');
+  return bytes;
+}
+
+async function fetchWasm(url, expectedSha256) {
+  const response = await fetch(url, { cache: 'force-cache' });
+  if (!response.ok) throw new Error(`WASM 下载失败：HTTP ${response.status}`);
+  const bytes = await response.arrayBuffer();
+  await verifySha256(bytes, expectedSha256, 'WASM');
   return bytes;
 }
 
@@ -37,19 +57,21 @@ self.addEventListener('message', async (event) => {
   const message = event.data;
   if (message?.type === 'init') {
     try {
-      const netPromise = fetchNet(message.netUrl);
+      const netPromise = fetchNet(message.netUrl, message.netSha256);
+      const wasmPromise = fetchWasm(message.wasmUrl, message.wasmSha256);
       importScripts(message.jsUrl);
       const factory = self.Pikafish;
       if (typeof factory !== 'function') {
         throw new Error('Pikafish factory missing after script load');
       }
+      const [net, wasmBinary] = await Promise.all([netPromise, wasmPromise]);
       const module = await factory({
+        wasmBinary,
         locateFile: (file) => (file.endsWith('.wasm') ? message.wasmUrl : file),
         mainScriptUrlOrBlob: message.jsUrl,
         print: (line) => self.postMessage({ type: 'line', line: String(line) }),
         printErr: (line) => self.postMessage({ type: 'stderr', line: String(line) }),
       });
-      const net = await netPromise;
       module.FS.writeFile('/pikafish.nnue', net);
       self.postMessage({ type: 'net-written', bytes: net.byteLength });
       const initialize = module.cwrap('pikafish_initialize', null, []);
