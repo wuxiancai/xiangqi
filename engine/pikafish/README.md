@@ -1,6 +1,6 @@
 # Pikafish 浏览器引擎
 
-此目录提供基于官方 Pikafish 源码的可选 WebAssembly 构建入口。默认仓库不携带引擎二进制或 NNUE 网络；使用者自行构建后，资源保存在 `engine/pikafish/dist/`，该目录已从 Git 排除。
+此目录提供基于官方 Pikafish 源码的可选 WebAssembly 构建入口。默认仓库不携带引擎二进制或 NNUE 网络；资源保存在 `engine/pikafish/dist/`，该目录已从 Git 排除。
 
 ## 构建
 
@@ -10,7 +10,9 @@
 bash engine/pikafish/build.sh
 ```
 
-脚本固定 Pikafish 源码版本，应用浏览器 UCI 包装补丁，使用 Emscripten Docker 镜像构建，并下载带 SHA-256 校验的匹配 NNUE 网络。首次构建会下载约数十 MiB 网络和编译工具镜像。应用通过同源 Worker 加载资源；多线程版要求服务端发送 COOP/COEP 隔离头。
+手动构建脚本默认使用固定源码版本，应用浏览器 UCI 包装补丁，使用 Emscripten Docker 镜像构建，并下载带 SHA-256 校验的匹配 NNUE 网络。首次构建会下载网络和编译工具镜像。应用通过同源 Worker 加载资源；多线程版要求服务端发送 COOP/COEP 隔离头。
+
+通过 `scripts/deploy.py` 自托管时，应用服务会每 24 小时检查官方 Pikafish 最新稳定发行版和官方 Networks 的 NNUE。发现新引擎或网络后，会用 Docker 自动构建 WASM，校验官方 NNUE SHA-256 及产物版本，再替换引擎；失败时保留当前版本并在服务日志中记录原因。需要 Git、Docker、网络访问及可运行 Docker 的服务账号。页面状态显示当前引擎版本。纯静态托管不运行自动更新器，需重新构建和发布静态资源。
 
 ## 许可与来源
 

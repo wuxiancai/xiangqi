@@ -4,6 +4,10 @@ import hashlib
 import json
 import os
 import errno
+import subprocess
+import sys
+import threading
+import time
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
@@ -11,6 +15,18 @@ from urllib.parse import unquote, urlsplit
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data" / "imported"
 MAX_BODY = 600 * 1024 * 1024
+
+
+def pikafish_auto_update_loop():
+    updater = ROOT / "scripts" / "update_pikafish.py"
+    time.sleep(30)
+    while True:
+        try:
+            subprocess.run([sys.executable, str(updater)], cwd=ROOT, check=True, timeout=7200)
+            time.sleep(24 * 60 * 60)
+        except Exception as error:
+            print(f"Pikafish 自动更新检查失败，6 小时后重试：{error}", flush=True)
+            time.sleep(6 * 60 * 60)
 
 
 class Handler(SimpleHTTPRequestHandler):
@@ -102,6 +118,7 @@ class Handler(SimpleHTTPRequestHandler):
 
 
 def main():
+    threading.Thread(target=pikafish_auto_update_loop, name="pikafish-auto-update", daemon=True).start()
     first_port = int(os.environ.get("PORT", "8000"))
     for port in range(first_port, 65536):
         try:

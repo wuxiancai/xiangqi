@@ -2,6 +2,8 @@ data/imported/*.json
 data/imported/*.tmp
 .build/
 engine/pikafish/dist/
+engine/pikafish/.dist-update-*/
+engine/pikafish/.dist-previous-*/
 .venv/
 .DS_Store
 *.log

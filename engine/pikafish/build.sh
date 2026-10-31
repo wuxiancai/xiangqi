@@ -4,22 +4,39 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 ENGINE="$ROOT/engine/pikafish"
 WORK="$ROOT/.build/pikafish"
-OUT="$ENGINE/dist"
-REV=6a59ee2f7b105bff64d9efc2692591107787e2b1
+OUT="${PIKAFISH_OUT:-$ENGINE/dist}"
+REV="${PIKAFISH_REV:-6a59ee2f7b105bff64d9efc2692591107787e2b1}"
 IMAGE=emscripten/emsdk:3.1.74
+NET_URL="${PIKAFISH_NET_URL:-https://github.com/brianhliou/pikafish-wasm/releases/download/v0.1.0/pikafish.nnue}"
+NET_SHA256="${PIKAFISH_NET_SHA256:-7d13d73569a9b571ba0eb20cf1596247bc2a42738967e61afef6482b231e900e}"
+PIKAFISH_VERSION="${PIKAFISH_VERSION:-$REV}"
+export PIKAFISH_NET_SHA256="$NET_SHA256"
 
 command -v git >/dev/null || { echo '需要 Git' >&2; exit 1; }
 command -v docker >/dev/null || { echo '需要 Docker' >&2; exit 1; }
 mkdir -p "$WORK" "$OUT"
+case "$OUT" in
+  "$ROOT"/*) OUT_REL="${OUT#"$ROOT"/}" ;;
+  *) echo 'PIKAFISH_OUT 必须位于项目目录内' >&2; exit 1 ;;
+esac
 if [ ! -d "$WORK/src/.git" ]; then
   git clone --filter=blob:none https://github.com/official-pikafish/Pikafish.git "$WORK/src"
 fi
 git -C "$WORK/src" fetch --depth 1 origin "$REV"
 git -C "$WORK/src" reset --hard "$REV"
-git -C "$WORK/src" apply "$ENGINE/source.patch"
+if git -C "$WORK/src" apply --check "$ENGINE/source.patch" 2>/dev/null; then
+  git -C "$WORK/src" apply "$ENGINE/source.patch"
+elif grep -q 'EMSCRIPTEN_KEEPALIVE' "$WORK/src/src/main.cpp" \
+  && grep -q 'bool UCIEngine::execute(const std::string& cmd)' "$WORK/src/src/uci.cpp" \
+  && grep -q 'bool execute(const std::string& cmd);' "$WORK/src/src/uci.h"; then
+  echo '上游源码已包含所需的 WebAssembly UCI 包装，跳过补丁。'
+else
+  echo '当前 Pikafish 源码无法应用或识别浏览器包装补丁。' >&2
+  exit 1
+fi
 
 # Build inside a pinned Emscripten image; mount the project at /project.
-docker run --rm -v "$ROOT:/project" -w /project/.build/pikafish/src "$IMAGE" bash -lc '
+docker run --rm -e OUT_REL="$OUT_REL" -v "$ROOT:/project" -w /project/.build/pikafish/src "$IMAGE" bash -lc '
   set -euo pipefail
   mapfile -t sources < <(find src -name "*.cpp" -not -path "*/universal/*" | sort)
   em++ "${sources[@]}" -Isrc -std=c++17 -O3 -funroll-loops -DNDEBUG -DIS_64BIT -DNO_PREFETCH \
@@ -30,23 +47,29 @@ docker run --rm -v "$ROOT:/project" -w /project/.build/pikafish/src "$IMAGE" bas
     -sEXPORTED_RUNTIME_METHODS=cwrap,FS -sINITIAL_MEMORY=256MB -sALLOW_MEMORY_GROWTH=1 \
     -sMAXIMUM_MEMORY=1GB -sSTACK_SIZE=3MB -sPTHREAD_POOL_SIZE=8 \
     -sPTHREAD_POOL_SIZE_STRICT=0 -sNO_EXIT_RUNTIME=1 -sINVOKE_RUN=0 \
-    -o /project/engine/pikafish/dist/pikafish.js
-  cp Copying.txt /project/engine/pikafish/dist/COPYING.txt
+    -o "/project/$OUT_REL/pikafish.js"
+  cp Copying.txt "/project/$OUT_REL/COPYING.txt"
 '
 
 NET="$OUT/pikafish.nnue"
 if [ ! -s "$NET" ]; then
-  curl -fL --retry 3 'https://github.com/brianhliou/pikafish-wasm/releases/download/v0.1.0/pikafish.nnue' -o "$NET"
+  curl -fL --retry 3 "$NET_URL" -o "$NET"
 fi
 python3 - "$NET" <<'PY'
 import hashlib, pathlib, sys
 path = pathlib.Path(sys.argv[1])
 digest = hashlib.sha256(path.read_bytes()).hexdigest()
-expected = '7d13d73569a9b571ba0eb20cf1596247bc2a42738967e61afef6482b231e900e'
+expected = __import__('os').environ.get('PIKAFISH_NET_SHA256', '7d13d73569a9b571ba0eb20cf1596247bc2a42738967e61afef6482b231e900e')
 if digest != expected:
     path.unlink(missing_ok=True)
     raise SystemExit(f'NNUE SHA-256 不匹配：{digest}')
 PY
 cp "$ENGINE/worker.js" "$OUT/worker.js"
 cp "$ENGINE/NNUE-License.md" "$OUT/NNUE-License.md"
+python3 - "$OUT/version.json" "$PIKAFISH_VERSION" "$REV" "$NET_SHA256" <<'PY'
+import json, pathlib, sys
+pathlib.Path(sys.argv[1]).write_text(json.dumps({
+    'version': sys.argv[2], 'commit': sys.argv[3], 'net_sha256': sys.argv[4]
+}, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+PY
 printf '构建完成：%s\n' "$OUT"

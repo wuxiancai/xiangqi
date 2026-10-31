@@ -63,7 +63,11 @@ export function formatRedEvaluation(line, side) {
   return `红方 ${scoreText} · WDL ${wdlText}`;
 }
 
-const asset = (name) => new URL(`./dist/${name}`, import.meta.url).href;
+const asset = (name, version = '') => {
+  const url = new URL(`./dist/${name}`, import.meta.url);
+  if (version) url.searchParams.set('v', version);
+  return url.href;
+};
 
 export class PikafishEngine {
   constructor(onUpdate = () => {}) {
@@ -74,17 +78,23 @@ export class PikafishEngine {
     this.queued = null;
     this.analysisId = 0;
     this.lines = [];
+    this.version = null;
   }
 
-  start() {
+  async start() {
     if (globalThis.crossOriginIsolated !== true) return Promise.reject(new Error('当前站点未启用 COOP/COEP，无法启动多线程引擎；请使用项目自托管服务或配置隔离响应头'));
     if (this.worker) return this.ready ? Promise.resolve() : Promise.reject(new Error('Pikafish 正在初始化'));
     const requiredAssets = ['worker.js', 'pikafish.js', 'pikafish.wasm', 'pikafish.nnue'];
+    const versionResponse = await fetch(asset('version.json'), { cache: 'no-store' });
+    if (versionResponse.ok) this.version = await versionResponse.json();
+    const cacheVersion = this.version?.commit
+      ? `${this.version.commit.slice(0, 12)}-${(this.version.net_sha256 || '').slice(0, 12)}`
+      : `uncached-${Date.now()}`;
     return Promise.all(requiredAssets.map(async (name) => {
-      const response = await fetch(asset(name), { method: 'HEAD', cache: 'no-store' });
+      const response = await fetch(asset(name, cacheVersion), { method: 'HEAD', cache: 'no-store' });
       if (!response.ok) throw new Error(`引擎资源 ${name} 不可用（HTTP ${response.status}）；请先运行 bash engine/pikafish/build.sh`);
     })).then(() => new Promise((resolve, reject) => {
-      const worker = new Worker(asset('worker.js'));
+      const worker = new Worker(asset('worker.js', cacheVersion));
       this.worker = worker;
       const timer = setTimeout(() => reject(new Error('引擎初始化超时')), 120000);
       worker.onmessage = ({ data }) => {
@@ -112,7 +122,7 @@ export class PikafishEngine {
         }
       };
       worker.onerror = (event) => { clearTimeout(timer); reject(new Error(event.message || 'Pikafish Worker 加载失败')); };
-      worker.postMessage({ type: 'init', jsUrl: asset('pikafish.js'), wasmUrl: asset('pikafish.wasm'), netUrl: asset('pikafish.nnue') });
+      worker.postMessage({ type: 'init', jsUrl: asset('pikafish.js', cacheVersion), wasmUrl: asset('pikafish.wasm', cacheVersion), netUrl: asset('pikafish.nnue', cacheVersion) });
     }));
   }
 

@@ -779,7 +779,7 @@ async function startPikafish({ automatic = false } = {}) {
   try {
     await engine.start();
     state.pikafish?.close(); state.pikafish = engine;
-    status.textContent = '已就绪 · Pikafish WebAssembly';
+    status.textContent = engine.version?.version ? `已就绪 · Pikafish ${engine.version.version}` : '已就绪 · Pikafish WebAssembly';
     $('#pikafish-analyze').disabled = false;
     button.textContent = '引擎已加载';
     void requestPikafishAnalysis();
