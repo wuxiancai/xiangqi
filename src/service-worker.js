@@ -1,5 +1,5 @@
-const CACHE_NAME = 'chuhe-shell-v101';
-const APP_SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon.svg', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-512-maskable.png', './icons/apple-touch-icon.png', './styles.css', './styles-import.css', './src/app.js', './src/pwa.js?v=1', './src/mobile-updater.js?v=1', './src/audio.js?v=wood-move-1', './src/importer.js', './src/xqf.js', './src/cbl.js', './src/rules.js', './src/notation.js', './src/repetition.js', './src/storage.js', './src/ai.js', './src/ai-worker.js', './engine/pikafish/engine.js?v=adaptive-resources-2', './engine/pikafish/worker.js?v=engine-runtime-guard-6', './data/records/modern-games.json'];
+const CACHE_NAME = 'chuhe-shell-v102';
+const APP_SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon.svg', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-512-maskable.png', './icons/apple-touch-icon.png', './styles.css', './styles-import.css', './src/app.js', './src/pwa.js?v=1', './src/mobile-updater.js?v=1', './src/audio.js?v=wood-move-1', './src/importer.js', './src/xqf.js', './src/cbl.js', './src/rules.js', './src/notation.js', './src/repetition.js', './src/storage.js', './src/ai.js', './src/ai-worker.js', './engine/pikafish/engine.js?v=incompatible-pair-fallback-1', './engine/pikafish/worker.js?v=engine-runtime-guard-7', './data/records/modern-games.json'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));

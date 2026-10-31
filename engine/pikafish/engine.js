@@ -132,6 +132,9 @@ async function loadEngineAssets(onUpdate = () => {}) {
 
 async function manifestAssets(manifest, onUpdate = () => {}) {
   if (!manifest.base_url || !manifest.assets) throw new Error('引擎版本清单缺少资源地址');
+  if (INCOMPATIBLE_ENGINE_NET_PAIRS.has(`${manifest.commit}:${manifest.net_sha256}`)) {
+    throw new Error('此 Pikafish 与 NNUE 组合已确认不兼容，已跳过该版本');
+  }
   const base = new URL(manifest.base_url);
   if (base.origin !== 'https://raw.githubusercontent.com' || !base.pathname.startsWith('/wuxiancai/xiangqi/engine-updates/releases/')) {
     throw new Error('引擎资源必须来自项目官方 Raw CDN');
@@ -221,7 +224,7 @@ export class PikafishEngine {
     if (this.worker) return this.ready ? Promise.resolve() : Promise.reject(new Error('Pikafish 正在初始化'));
     const assets = await loadEngineAssets((message) => this.onUpdate(message));
     this.onUpdate({ type: 'status', text: '正在启动 WebAssembly 引擎…' });
-    const workerUrl = new URL('./worker.js?v=engine-runtime-guard-6', import.meta.url);
+    const workerUrl = new URL('./worker.js?v=engine-runtime-guard-7', import.meta.url);
     const workerResponse = await fetch(workerUrl, { method: 'HEAD', cache: 'no-store' });
     if (!workerResponse.ok) throw new Error(`引擎 Worker 不可用（HTTP ${workerResponse.status}）`);
     this.version = assets.version;
