@@ -36,4 +36,7 @@ npm test
 - 内置库当前收录 36 盘现代大师对局和 40 盘残局，共 76 盘，着法均通过规则校验。现代/残局数据源为 [Chinese Chess Practical Dataset（CC BY 4.0）](https://github.com/Yvonne761/Chinese-Chess-Practical-Dataset)，来源、版本和归属见 `data/ATTRIBUTION.md`。古谱《梅花谱》《橘中秘》《适情雅趣》尚未录入；100 盘首版目标未达成，不应将当前版本视为完整内容交付。
 - 首版导入仅支持 `xiangqi-study/v1` JSON（最大 2 MiB）；XQF、PGN、ICCS 文本解析仍延后。
 - 内置 AI 棋力未经认证；API 模型强度无法与引擎等级等同。API 密钥存于当前浏览器 IndexedDB，浏览器直连服务商存在密钥暴露与 CORS 限制。
+## 停止服务
+
+在 Linux 或 macOS 项目目录执行 `./stop.sh`。脚本会停止并禁用对应的 systemd/launchd 服务，再检查并停止由本项目 `app_server.py` 或 `run_server.py` 直接启动的残留进程。Linux 若通过 systemd 部署，会在需要时调用 `sudo`。Windows 请运行 `python scripts/stop.py`。
 - 自托管静态文件可由 HTTPS 静态站点托管；首版无后端进程，因此无需 systemd 服务。

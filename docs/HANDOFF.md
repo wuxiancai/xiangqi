@@ -301,4 +301,8 @@
 - 首次启动时显示浮动准备提示，说明需要下载引擎程序、WASM 和 NNUE 棋力网络，并告知用户仍可浏览棋谱；下载进度显示各资源已接收大小及服务器提供长度时的百分比。
 - 下载完成后提示引擎可用；网络或初始化失败时保留错误信息并提示可在引擎面板重试。用户可关闭提示，不会取消下载。
 - 更新 Pikafish 模块资源查询参数与 Service Worker 缓存版本至 v90，避免旧缓存继续使用不带进度的引擎模块。
+## 2026-10-31 增加 stop.sh 服务停止脚本
+
+- 新增项目根目录 `stop.sh`，支持 Linux 与 macOS：先停止并禁用 systemd/launchd 服务，再按项目脚本绝对路径检查直接启动的 `app_server.py`/`run_server.py` 进程；发送 SIGTERM，等待 8 秒后仅对仍存活的匹配 PID 使用 SIGKILL。
+- 不按端口或 Python 进程名批量结束，避免误杀同机其他网站服务。Windows 继续使用 `python scripts/stop.py`。
 - Service Worker shell 缓存升至 v63。尚未实际部署云服务器或运行测试；需在目标 Linux 主机执行 `sudo python3 scripts/deploy.py`，并按输出端口配置防火墙/反向代理。`git diff --check` 待本轮收尾执行。
