@@ -26,7 +26,7 @@ const state = {
   view: 'study', records: [], builtinRecords: [], currentRecord: null, studyPly: 0, studyFlipped: false, selectedCategory: '', selectedSourcePath: [], query: '', timer: null,
   expandedRecordGroups: new Set(), board: initialBoard(), side: RED, history: [], playFlipped: false, gameOver: false, adjudication: null, settings: {}, aiBusy: false,
   pikafish: null, engineAnalyses: { red: null, black: null }, engineAnalysisTask: null, engineAnalysisTarget: null,
-  aiVsAiRunning: false, aiMoveTimer: null,
+  aiVsAiRunning: false, aiMoveTimer: null, repetitionPending: null,
 };
 let moveAudio;
 let checkmateAnimationTimer;
@@ -628,7 +628,7 @@ async function exportRecords() {
 }
 
 function saveGame() {
-  const payload = { board: state.board, side: state.side, history: state.history, gameOver: state.gameOver, adjudication: state.adjudication, mode: $('#mode-select').value, userSide: $('#side-select').value };
+  const payload = { board: state.board, side: state.side, history: state.history, gameOver: state.gameOver, adjudication: state.adjudication, repetitionPending: state.repetitionPending, mode: $('#mode-select').value, userSide: $('#side-select').value };
   recordRepository.putState('active-game', payload).catch(() => {});
 }
 
@@ -645,9 +645,13 @@ function renderPlayBoard() {
     });
   renderBoard($('#play-board'), state.board, state.playFlipped, onPlaySquare, state.selectedSquare ?? null, hints, last, pieceThreatStatus(state.board), arrows);
   const endStatus = state.adjudication ?? status;
-  const endReason = state.adjudication ? '长将判负' : status.reason;
-  $('#turn-label').textContent = state.gameOver ? `${names[endStatus.winner]}胜 · ${endReason}` : `${names[state.side]}走棋${status.inCheck ? ' · 将军' : ''}`;
-  $('#play-status').textContent = $('#turn-label').textContent;
+  const endReason = state.adjudication?.reason ?? status.reason;
+  $('#turn-label').textContent = state.gameOver
+    ? endStatus.winner ? `${names[endStatus.winner]}胜 · ${endReason}` : `和棋 · ${endReason}`
+    : `${names[state.side]}走棋${status.inCheck ? ' · 将军' : ''}`;
+  $('#play-status').textContent = state.repetitionPending && !state.gameOver
+    ? state.repetitionPending.reason
+    : $('#turn-label').textContent;
   const currentAnalysis = state.engineAnalyses[state.side];
   const currentLine = currentAnalysis?.position === positionKey(state.board, state.side)
     ? currentAnalysis.lines.find((line) => line.multipv === 1) ?? null
@@ -726,16 +730,39 @@ async function playMove(move) {
   } else if (tacticalTargets.length >= 3) playTacticSpeech('捉三');
   else if (tacticalTargets.length >= 2) playTacticSpeech('捉双');
   const initialPosition = state.history[0];
-  const trace = [{ key: `${initialPosition.previousBoard.map((piece) => piece ?? '.').join('')}:${initialPosition.previousSide}` }];
+  const trace = [{ key: `${initialPosition.previousBoard.join('')}:${initialPosition.previousSide}` }];
+  let traceBoard = [...initialPosition.previousBoard];
+  let pieceIds = traceBoard.map((piece, square) => piece ? square : null);
   for (const entry of state.history) {
-    const nextBoard = applyMove(entry.previousBoard, entry.move);
+    const { from, to } = entry.move;
+    const nextBoard = applyMove(traceBoard, entry.move);
+    const nextIds = [...pieceIds];
+    nextIds[to] = pieceIds[from];
+    nextIds[from] = null;
     const nextSide = otherSide(entry.previousSide);
-    trace.push({ key: `${nextBoard.map((piece) => piece ?? '.').join('')}:${nextSide}`, mover: entry.previousSide, gaveCheck: isInCheck(nextBoard, nextSide) });
+    trace.push({ key: `${nextBoard.join('')}:${nextSide}`, mover: entry.previousSide, moveKey: `${from}-${to}`, gaveCheck: isInCheck(nextBoard, nextSide), board: nextBoard, ids: nextIds });
+    traceBoard = nextBoard;
+    pieceIds = nextIds;
   }
-  state.adjudication = status.over ? null : adjudicateRepetition(trace);
+  const repetitionDecision = status.over ? null : adjudicateRepetition(trace, { includePending: true });
+  const repetitionAdjudication = repetitionDecision?.over ? repetitionDecision : null;
+  const quietMoveCount = consecutiveNoCaptureMoves(state.history);
+  const noCaptureDraw = !status.over && !repetitionAdjudication && quietMoveCount >= 120
+    ? { over: true, winner: null, reason: '连续120步未吃子，判和' }
+    : null;
+  const hadRepetitionPending = Boolean(state.repetitionPending);
+  state.repetitionPending = !noCaptureDraw && repetitionDecision?.pending ? repetitionDecision : null;
+  state.adjudication = repetitionAdjudication ?? noCaptureDraw;
   state.gameOver = status.over || Boolean(state.adjudication);
+  if (!state.gameOver && state.repetitionPending && !hadRepetitionPending) toast(state.repetitionPending.reason);
+  if (!state.gameOver && quietMoveCount === 110) toast('连续未吃子已达110步，再走10步将按自然限着判和。');
   renderPlayBoard(); saveGame();
-  if (state.gameOver) { toast(`${names[state.adjudication?.winner ?? status.winner]}胜：${state.adjudication?.reason ?? status.reason}`); return; }
+  if (state.gameOver) {
+    const outcome = state.adjudication ?? status;
+    const reason = state.adjudication?.reason ?? status.reason;
+    toast(outcome.winner ? `${names[outcome.winner]}胜：${reason}` : `和棋：${reason}`);
+    return;
+  }
   const mode = $('#mode-select').value; const userSide = $('#side-select').value;
   if (mode === 'ai' && state.side !== userSide) await scheduleAiMove();
   else if (state.pikafish?.ready) void requestPikafishAnalysis();
@@ -777,7 +804,7 @@ function undoMove() {
   while (count-- && state.history.length) {
     const last = state.history.pop(); state.board = last.previousBoard; state.side = last.previousSide;
   }
-  state.gameOver = false; state.adjudication = null; state.selectedSquare = null; renderPlayBoard(); saveGame();
+  state.gameOver = false; state.adjudication = null; state.repetitionPending = null; state.selectedSquare = null; renderPlayBoard(); saveGame();
   if (state.pikafish?.ready) void requestPikafishAnalysis();
 }
 
@@ -963,12 +990,12 @@ function bindEvents() {
   $('#play-flip').addEventListener('click', () => { state.playFlipped = !state.playFlipped; renderPlayBoard(); });
   $('#undo-button').addEventListener('click', undoMove);
   $('#restart-button').addEventListener('click', () => {
-    resetEngineAnalyses(); state.board = initialBoard(); state.side = RED; state.history = []; state.gameOver = false; state.adjudication = null; state.selectedSquare = null; renderPlayBoard(); saveGame();
+    resetEngineAnalyses(); state.board = initialBoard(); state.side = RED; state.history = []; state.gameOver = false; state.adjudication = null; state.repetitionPending = null; state.selectedSquare = null; renderPlayBoard(); saveGame();
     if ($('#mode-select').value === 'ai' && $('#side-select').value === 'black') scheduleAiMove();
     else if (state.pikafish?.ready) void requestPikafishAnalysis();
   });
-  $('#mode-select').addEventListener('change', () => { resetEngineAnalyses(); state.board = initialBoard(); state.side = RED; state.history = []; state.gameOver = false; state.adjudication = null; renderPlayBoard(); saveGame(); if ($('#mode-select').value === 'ai' && $('#side-select').value === 'black') scheduleAiMove(); else if (state.pikafish?.ready) void requestPikafishAnalysis(); });
-  $('#side-select').addEventListener('change', () => { if ($('#mode-select').value === 'ai') { resetEngineAnalyses(); state.board = initialBoard(); state.side = RED; state.history = []; state.gameOver = false; state.adjudication = null; renderPlayBoard(); saveGame(); if ($('#side-select').value === 'black') scheduleAiMove(); else if (state.pikafish?.ready) void requestPikafishAnalysis(); } });
+  $('#mode-select').addEventListener('change', () => { resetEngineAnalyses(); state.board = initialBoard(); state.side = RED; state.history = []; state.gameOver = false; state.adjudication = null; state.repetitionPending = null; renderPlayBoard(); saveGame(); if ($('#mode-select').value === 'ai' && $('#side-select').value === 'black') scheduleAiMove(); else if (state.pikafish?.ready) void requestPikafishAnalysis(); });
+  $('#side-select').addEventListener('change', () => { if ($('#mode-select').value === 'ai') { resetEngineAnalyses(); state.board = initialBoard(); state.side = RED; state.history = []; state.gameOver = false; state.adjudication = null; state.repetitionPending = null; renderPlayBoard(); saveGame(); if ($('#side-select').value === 'black') scheduleAiMove(); else if (state.pikafish?.ready) void requestPikafishAnalysis(); } });
   $('#pikafish-start').addEventListener('click', startPikafish);
   $('#pikafish-analyze').addEventListener('click', analyzePikafish);
   $('#pikafish-depth').addEventListener('change', () => { if (state.pikafish?.ready) void requestPikafishAnalysis(); });
@@ -976,7 +1003,7 @@ function bindEvents() {
   $('#clear-key').addEventListener('click', async () => { state.settings = { ...state.settings, apiKey: '' }; await saveSettings(state.settings); $('#api-key').value = ''; toast('本机 API 密钥已清除'); });
   $('#clear-data').addEventListener('click', async () => {
     if (!confirm('这会删除此浏览器中的导入棋谱、对局和设置，且无法恢复。建议先导出备份。继续吗？')) return;
-    await recordRepository.clearAll(); state.records = []; state.currentRecord = null; state.history = []; state.board = initialBoard(); state.side = RED; state.gameOver = false; state.adjudication = null; state.settings = {};
+    await recordRepository.clearAll(); state.records = []; state.currentRecord = null; state.history = []; state.board = initialBoard(); state.side = RED; state.gameOver = false; state.adjudication = null; state.repetitionPending = null; state.settings = {};
     renderLibrary(); renderStudyBoard(); renderPlayBoard(); $('#api-url').value = ''; $('#api-model').value = ''; $('#api-key').value = ''; toast('本机数据已清除');
   });
   $('#save-settings').addEventListener('click', async (event) => {
@@ -1003,7 +1030,7 @@ async function initialize() {
     state.settings = await loadSettings();
     const savedGame = await recordRepository.getState('active-game');
     if (savedGame?.board?.length === 90 && Array.isArray(savedGame.history)) {
-      state.board = savedGame.board; state.side = savedGame.side; state.history = savedGame.history; state.gameOver = savedGame.gameOver; state.adjudication = savedGame.adjudication ?? null;
+      state.board = savedGame.board; state.side = savedGame.side; state.history = savedGame.history; state.gameOver = savedGame.gameOver; state.adjudication = savedGame.adjudication ?? null; state.repetitionPending = savedGame.repetitionPending ?? null;
       $('#mode-select').value = savedGame.mode ?? 'ai'; $('#side-select').value = savedGame.userSide ?? 'red';
     }
   } catch { $('#storage-status').textContent = '本地存储不可用'; }
