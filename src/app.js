@@ -636,7 +636,7 @@ function renderPlayBoard() {
   const last = state.history.at(-1)?.move ?? null;
   const status = gameStatus(state.board, state.side);
   const analysis = state.engineAnalyses[state.side];
-  const arrows = analysis?.position === positionKey(state.board, state.side) ? engineCandidateMoves(analysis.lines, analysis.board, analysis.side ?? state.side).slice(0, 1).map(({ move, notation }) => ({ ...move, side: state.side, notation })) : [];
+  const arrows = analysis?.status === '分析完成' && analysis.position === positionKey(state.board, state.side) ? engineCandidateMoves(analysis.lines, analysis.board, analysis.side ?? state.side).slice(0, 1).map(({ move, notation }) => ({ ...move, side: state.side, notation })) : [];
   const hints = state.selectedSquare == null ? [] : legalMoves(state.board, state.side)
     .filter((move) => move.from === state.selectedSquare)
     .map((move) => {
