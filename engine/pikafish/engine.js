@@ -26,6 +26,16 @@ export function engineMoveToICCS(move) {
   return `${move[0]}${9 - Number(move[1])}${move[2]}${9 - Number(move[3])}`;
 }
 
+export function getPikafishResourceConfig(capabilities = globalThis.navigator ?? {}) {
+  const reportedThreads = Number(capabilities.hardwareConcurrency) || 1;
+  const reportedMemoryGiB = Number(capabilities.deviceMemory) || 2;
+  const threads = Math.min(32, Math.max(1, Math.floor(reportedThreads)));
+  // deviceMemory is a rounded browser estimate. Reserve half for the browser,
+  // the engine runtime, NNUE, and worker stacks; the WASM heap caps Hash at 2 GiB.
+  const hashMb = Math.min(1280, Math.max(64, Math.floor(reportedMemoryGiB * 512)));
+  return { threads, hashMb };
+}
+
 export function parseUciInfoLine(line) {
   if (!line.startsWith('info ')) return null;
   const depth = Number(line.match(/\bdepth (\d+)/)?.[1] ?? 0);
@@ -254,10 +264,10 @@ export class PikafishEngine {
           if (this.pending && !this.pending.stopping) this.#resetSearchWatchdog(this.pending);
           this.#line(data.line);
           if (data.line === 'uciok' && !this.ready) {
-            const threads = Math.max(1, Math.min(8, Number(navigator.hardwareConcurrency) || 1));
+            const { threads, hashMb } = getPikafishResourceConfig();
             worker.postMessage({ type: 'command', command: 'setoption name EvalFile value /pikafish.nnue' });
             worker.postMessage({ type: 'command', command: `setoption name Threads value ${threads}` });
-            worker.postMessage({ type: 'command', command: 'setoption name Hash value 256' });
+            worker.postMessage({ type: 'command', command: `setoption name Hash value ${hashMb}` });
             worker.postMessage({ type: 'command', command: 'setoption name UCI_ShowWDL value true' });
             worker.postMessage({ type: 'command', command: 'isready' });
           } else if (data.line === 'readyok' && !this.ready) {

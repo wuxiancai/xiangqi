@@ -20,6 +20,7 @@ DIST = ROOT / "engine" / "pikafish" / "dist"
 API = "https://api.github.com/repos"
 HEADERS = {"Accept": "application/vnd.github+json", "User-Agent": "Chuhe-Pikafish-Release-Builder"}
 ASSETS = ("worker.js", "pikafish.js", "pikafish.wasm", "pikafish.nnue", "COPYING.txt", "NNUE-License.md", "version.json")
+BUILD_PROFILE = "adaptive-resources-2gb-v1"
 
 
 def request_bytes(url, headers=None):
@@ -75,6 +76,7 @@ def check(repository):
         manifest.get("version") == tag
         and manifest.get("commit") == commit
         and manifest.get("net_sha256") == digest[7:]
+        and manifest.get("build_profile") == BUILD_PROFILE
     )
     outputs = {
         "update": str(changed).lower(),
@@ -118,8 +120,9 @@ def make_manifest(repository):
     manifest = {
         "schema": "chuhe-pikafish/v1",
         "engine_api": 1,
+        "build_profile": BUILD_PROFILE,
         "version": metadata["version"],
-        "release_id": f"{metadata['version']}-{metadata['commit'][:12]}-{metadata['net_sha256'][:12]}",
+        "release_id": f"{metadata['version']}-{metadata['commit'][:12]}-{metadata['net_sha256'][:12]}-{BUILD_PROFILE}",
         "commit": metadata["commit"],
         "net_sha256": metadata["net_sha256"],
         "minimum_app_version": "1.0.0",
