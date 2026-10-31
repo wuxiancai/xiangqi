@@ -291,4 +291,9 @@
 
 - 将本版定义为 v1.0：`package.json` 使用 SemVer `1.0.0`，页面页脚、部署启动日志和 systemd 描述标记 `v1.0`。
 - 部署脚本从起始端口（默认 8000，可由 `PORT` 指定）探测首个空闲端口，配置 systemd/launchd/Windows 计划任务并打印访问端口。服务启动时再次从配置端口起递增绑定，以覆盖部署探测后的端口竞争；直接运行服务也支持该顺延行为。
+## 2026-10-31 跨平台 PWA 安装
+
+- 增加 Web App Manifest、192/512 px 图标与 iOS 主屏图标；Android 支持浏览器安装提示，iOS 显示 Safari“添加到主屏幕”步骤。
+- Service Worker 更新至 v89，将清单和图标纳入应用壳缓存；离线导航可回退至已缓存首页。Pikafish 远端版本检查与引擎文件下载仍需联网。
+- 部署要求 HTTPS（`localhost` 开发例外），不需要 Docker、Apple/Google 开发者账号或商店上架。移动设备实机验收待完成。
 - Service Worker shell 缓存升至 v63。尚未实际部署云服务器或运行测试；需在目标 Linux 主机执行 `sudo python3 scripts/deploy.py`，并按输出端口配置防火墙/反向代理。`git diff --check` 待本轮收尾执行。

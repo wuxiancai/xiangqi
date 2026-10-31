@@ -5,6 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#f3eee3">
   <meta name="description" content="在浏览器中学习棋谱、练习中国象棋。">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
   <title>楚河 · 象棋学习与对弈</title>
   <link rel="stylesheet" href="./styles.css">
   <link rel="stylesheet" href="./styles-import.css">
@@ -17,6 +23,7 @@
         <button class="nav-button active" data-view="study">棋谱学习</button>
         <button class="nav-button" data-view="play">开始对弈</button>
       </nav>
+      <button id="pwa-install-button" class="quiet-button pwa-install-button" type="button" hidden>安装应用</button>
       <div id="study-header-actions" class="study-header-actions">
         <div class="study-header-copy"><h1>从一着棋，读懂整盘棋！</h1></div>
         <div class="import-actions"><label class="import-button">导入棋谱<input id="import-file" type="file" accept=".json,.txt,.md,.pgn,.iccs,.fen,.cpx,.xqf,.cbl,.doc,.docx,.pdf,.png,.jpg,.jpeg,.webp,.bmp,.tif,.tiff,application/json,text/plain,text/markdown,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/*" hidden></label><label class="import-button secondary-import">导入文件夹<input id="import-folder" type="file" webkitdirectory directory multiple accept=".xqf,.cbl" hidden></label><p id="folder-import-status" class="folder-import-status" role="status" aria-live="polite" hidden></p></div>
@@ -75,6 +82,8 @@
   </div>
 
   <dialog id="settings-dialog" class="settings-dialog"><form method="dialog"><div class="dialog-heading"><div><p class="eyebrow">PREFERENCES</p><h2>设置</h2></div><button class="icon-button" value="cancel" aria-label="关闭">×</button></div><p class="settings-warning">API 密钥仅保存在此浏览器本地。浏览器直连供应商会暴露密钥，并受其跨域策略限制。请勿在公用设备保存密钥。</p><label class="field-label">兼容接口地址<input id="api-url" type="url" placeholder="https://api.example.com/v1"></label><label class="field-label">模型名称<input id="api-model" type="text" placeholder="模型名称"></label><label class="field-label">API 密钥<input id="api-key" type="password" autocomplete="off" placeholder="sk-…"></label><div class="dialog-actions"><button id="clear-key" class="text-button" type="button">清除本机密钥</button><button id="clear-data" class="text-button" type="button">清除本机数据</button><button id="save-settings" class="primary-button" value="default">保存设置</button></div></form></dialog>
+  <dialog id="save-record-dialog" class="settings-dialog"><form method="dialog"><div class="dialog-heading"><div><p class="eyebrow">SAVE GAME</p><h2>保存棋谱</h2></div><button class="icon-button" value="cancel" aria-label="关闭">×</button></div><p id="save-record-status" class="settings-warning">棋谱夹是应用棋谱库中的分类，可选择已有棋谱夹或新建一个。</p><label class="field-label">棋谱库文件夹<select id="save-record-folder"></select></label><label id="save-record-new-folder-wrap" class="field-label" hidden>新文件夹名称<input id="save-record-new-folder" type="text" maxlength="50" placeholder="例如：经典残局"></label><label class="field-label">棋谱名称<input id="save-record-title" type="text" maxlength="120" placeholder="例如：周末对局"></label><div class="dialog-actions"><button class="text-button" value="cancel">取消</button><button id="save-record-confirm" class="primary-button" type="button">保存到棋谱库</button></div></form></dialog>
+  <dialog id="pwa-install-help" class="settings-dialog"><form method="dialog"><div class="dialog-heading"><div><p class="eyebrow">INSTALL APP</p><h2>添加楚河到主屏幕</h2></div><button class="icon-button" value="cancel" aria-label="关闭">×</button></div><p class="settings-warning">添加后可从手机桌面直接打开。棋谱与设置仍保存在此设备的浏览器中。</p><ol class="pwa-install-steps"><li><strong>iPhone / iPad：</strong>在 Safari 点“分享”按钮，再选择“添加到主屏幕”。</li><li><strong>Android：</strong>在 Chrome 菜单中选择“安装应用”或“添加到主屏幕”。</li></ol><div class="dialog-actions"><button class="primary-button" value="cancel">知道了</button></div></form></dialog>
   <dialog id="import-dialog" class="settings-dialog import-dialog"><form method="dialog"><div class="dialog-heading"><div><p class="eyebrow">REVIEW IMPORT</p><h2>检查并转换棋谱</h2></div><button class="icon-button" value="cancel" aria-label="关闭">×</button></div><p id="import-status" class="settings-warning">检查识别出的棋谱文本；图片和扫描版 PDF 的 OCR 可能需要修正。</p><label class="field-label">棋谱名称<input id="import-title" type="text" maxlength="120"></label><label class="field-label">识别文本（可编辑）<textarea id="import-text" rows="12" spellcheck="false"></textarea></label><p class="import-privacy">文档内容仅在本机浏览器提取和识别，不会上传。首次使用 PDF/OCR 需联网加载解析组件。</p><div class="dialog-actions"><button class="text-button" value="cancel">取消</button><button id="convert-import" class="primary-button" type="button">校验并导入</button></div></form></dialog>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <script type="module" src="./src/app.js"></script>

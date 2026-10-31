@@ -18,6 +18,10 @@ Linux systemd 服务模板位于 `deploy/xiangqi.service`，部署脚本会按�
 
 GitHub Actions 每日检查 Pikafish 官方发行版与 NNUE 更新，在 CI runner 上使用 Emscripten 构建并发布版本化引擎文件。项目服务器无需 Docker；网页从公开版本清单自动下载新引擎。手机 App 的整包更新采用版本提示和用户手动下载安装包。
 
+## 手机安装（PWA）
+
+本站支持跨平台 PWA。将网站部署到 HTTPS 域名后，Android Chrome 可使用页面中的“安装应用”按钮；iPhone/iPad 请在 Safari 中点“分享”→“添加到主屏幕”。无需 Apple/Google 开发者账号、应用商店或 Docker。网页外壳、棋盘与本地数据可在首次打开后离线使用；Pikafish 新版本清单及引擎下载需要网络连接。升级网站后，Service Worker 会更新缓存的应用文件。
+
 ## 验证
 
 ```sh
