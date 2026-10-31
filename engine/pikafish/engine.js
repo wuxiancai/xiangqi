@@ -254,10 +254,12 @@ export class PikafishEngine {
           if (this.pending && !this.pending.stopping) this.#resetSearchWatchdog(this.pending);
           this.#line(data.line);
           if (data.line === 'uciok' && !this.ready) {
-            const threads = Math.max(1, Math.min(8, Number(navigator.hardwareConcurrency) || 1));
+            const threads = Math.max(1, Math.min(16, Number(navigator.hardwareConcurrency) || 1));
+            const deviceMemory = Number(navigator.deviceMemory) || 4;
+            const hashMb = Math.min(2048, Math.max(512, Math.floor(deviceMemory * 256)));
             worker.postMessage({ type: 'command', command: 'setoption name EvalFile value /pikafish.nnue' });
             worker.postMessage({ type: 'command', command: `setoption name Threads value ${threads}` });
-            worker.postMessage({ type: 'command', command: 'setoption name Hash value 256' });
+            worker.postMessage({ type: 'command', command: `setoption name Hash value ${hashMb}` });
             worker.postMessage({ type: 'command', command: 'setoption name UCI_ShowWDL value true' });
             worker.postMessage({ type: 'command', command: 'isready' });
           } else if (data.line === 'readyok' && !this.ready) {
