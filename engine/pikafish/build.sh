@@ -9,6 +9,7 @@ REV="${PIKAFISH_REV:-6a59ee2f7b105bff64d9efc2692591107787e2b1}"
 NET_URL="${PIKAFISH_NET_URL:-https://github.com/brianhliou/pikafish-wasm/releases/download/v0.1.0/pikafish.nnue}"
 NET_SHA256="${PIKAFISH_NET_SHA256:-7d13d73569a9b571ba0eb20cf1596247bc2a42738967e61afef6482b231e900e}"
 PIKAFISH_VERSION="${PIKAFISH_VERSION:-$REV}"
+PIKAFISH_BUILD_PROFILE="${PIKAFISH_BUILD_PROFILE:-adaptive-resources-2gb-v1}"
 export PIKAFISH_NET_SHA256="$NET_SHA256"
 
 command -v git >/dev/null || { echo '需要 Git' >&2; exit 1; }
@@ -60,10 +61,10 @@ if digest != expected:
 PY
 cp "$ENGINE/worker.js" "$OUT/worker.js"
 cp "$ENGINE/NNUE-License.md" "$OUT/NNUE-License.md"
-python3 - "$OUT/version.json" "$PIKAFISH_VERSION" "$REV" "$NET_SHA256" <<'PY'
+python3 - "$OUT/version.json" "$PIKAFISH_VERSION" "$REV" "$NET_SHA256" "$PIKAFISH_BUILD_PROFILE" <<'PY'
 import json, pathlib, sys
 pathlib.Path(sys.argv[1]).write_text(json.dumps({
-    'version': sys.argv[2], 'commit': sys.argv[3], 'net_sha256': sys.argv[4]
+    'version': sys.argv[2], 'commit': sys.argv[3], 'net_sha256': sys.argv[4], 'build_profile': sys.argv[5]
 }, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
 PY
 printf '构建完成：%s\n' "$OUT"

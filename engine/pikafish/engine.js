@@ -26,13 +26,14 @@ export function engineMoveToICCS(move) {
   return `${move[0]}${9 - Number(move[1])}${move[2]}${9 - Number(move[3])}`;
 }
 
-export function getPikafishResourceConfig(capabilities = globalThis.navigator ?? {}) {
+export function getPikafishResourceConfig(capabilities = globalThis.navigator ?? {}, buildProfile = '') {
   const reportedThreads = Number(capabilities.hardwareConcurrency) || 1;
   const reportedMemoryGiB = Number(capabilities.deviceMemory) || 2;
   const threads = Math.min(32, Math.max(1, Math.floor(reportedThreads)));
-  // deviceMemory is a rounded browser estimate. Reserve half for the browser,
-  // the engine runtime, NNUE, and worker stacks; the WASM heap caps Hash at 2 GiB.
-  const hashMb = Math.min(1280, Math.max(64, Math.floor(reportedMemoryGiB * 512)));
+  // Old cached builds have a 1 GiB WASM limit. Only the versioned 2 GiB build
+  // profile may use the larger Hash; reserve memory for runtime and workers.
+  const maxHashMb = buildProfile === 'adaptive-resources-2gb-v1' ? 1280 : 256;
+  const hashMb = Math.min(maxHashMb, Math.max(64, Math.floor(reportedMemoryGiB * 512)));
   return { threads, hashMb };
 }
 
@@ -108,7 +109,9 @@ async function loadEngineAssets(onUpdate = () => {}) {
     if (INCOMPATIBLE_ENGINE_NET_PAIRS.has(`${latest.commit}:${latest.net_sha256}`)) {
       throw new Error('线上 Pikafish 与 NNUE 版本不兼容，改用本机已验证引擎');
     }
-    if (latest.commit === localVersion?.commit && latest.net_sha256 === localVersion?.net_sha256) {
+    if (latest.commit === localVersion?.commit
+      && latest.net_sha256 === localVersion?.net_sha256
+      && latest.build_profile === localVersion?.build_profile) {
       onUpdate({ type: 'status', text: '正在准备已缓存的引擎资源…' });
       return localAssets(localVersion);
     }
@@ -264,7 +267,7 @@ export class PikafishEngine {
           if (this.pending && !this.pending.stopping) this.#resetSearchWatchdog(this.pending);
           this.#line(data.line);
           if (data.line === 'uciok' && !this.ready) {
-            const { threads, hashMb } = getPikafishResourceConfig();
+            const { threads, hashMb } = getPikafishResourceConfig(globalThis.navigator, this.version?.build_profile);
             worker.postMessage({ type: 'command', command: 'setoption name EvalFile value /pikafish.nnue' });
             worker.postMessage({ type: 'command', command: `setoption name Threads value ${threads}` });
             worker.postMessage({ type: 'command', command: `setoption name Hash value ${hashMb}` });
