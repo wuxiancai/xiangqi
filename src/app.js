@@ -900,6 +900,11 @@ async function startPikafish({ automatic = false } = {}) {
     else if (message.type === 'analysis') {
       const analysis = state.engineAnalyses[message.side];
       if (analysis?.analysisId === message.analysisId) { analysis.lines = message.lines; renderPlayBoard(); renderEngineLines(); }
+    } else if (message.type === 'runtime-error') {
+      status.textContent = `引擎搜索失败：${message.message}`;
+      button.disabled = false;
+      button.textContent = '重试加载';
+      $('#pikafish-analyze').disabled = true;
     }
   });
   try {

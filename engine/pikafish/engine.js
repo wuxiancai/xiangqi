@@ -200,7 +200,7 @@ export class PikafishEngine {
     if (this.worker) return this.ready ? Promise.resolve() : Promise.reject(new Error('Pikafish 正在初始化'));
     const assets = await loadEngineAssets((message) => this.onUpdate(message));
     this.onUpdate({ type: 'status', text: '正在启动 WebAssembly 引擎…' });
-    const workerUrl = new URL('./worker.js?v=engine-cdn-2', import.meta.url);
+    const workerUrl = new URL('./worker.js?v=engine-runtime-guard-1', import.meta.url);
     const workerResponse = await fetch(workerUrl, { method: 'HEAD', cache: 'no-store' });
     if (!workerResponse.ok) throw new Error(`引擎 Worker 不可用（HTTP ${workerResponse.status}）`);
     this.version = assets.version;
@@ -236,6 +236,7 @@ export class PikafishEngine {
         } else if (data.type === 'status') {
           this.onUpdate({ type: 'status', text: data.text });
         } else if (data.type === 'line') {
+          if (this.pending && !this.pending.stopping) this.#resetSearchWatchdog(this.pending);
           this.#line(data.line);
           if (data.line === 'uciok' && !this.ready) {
             const threads = Math.max(1, Math.min(8, Number(navigator.hardwareConcurrency) || 1));
@@ -250,11 +251,21 @@ export class PikafishEngine {
             resolve();
           }
         } else if (data.type === 'error') {
-          clearTimeout(timer);
-          reject(new Error(data.message || 'Pikafish 初始化失败'));
+          const error = new Error(data.message || 'Pikafish 初始化失败');
+          if (this.ready) this.#failWorker(error);
+          else { clearTimeout(timer); reject(error); }
         }
       };
-      worker.onerror = (event) => { clearTimeout(timer); reject(new Error(event.message || 'Pikafish Worker 加载失败')); };
+      worker.onmessageerror = () => {
+        const error = new Error('Pikafish Worker 消息解析失败');
+        if (this.ready) this.#failWorker(error);
+        else { clearTimeout(timer); reject(error); }
+      };
+      worker.onerror = (event) => {
+        const error = new Error(event.message || 'Pikafish Worker 运行失败');
+        if (this.ready) this.#failWorker(error);
+        else { clearTimeout(timer); reject(error); }
+      };
       worker.postMessage({ type: 'init', ...assets });
     });
   }
@@ -274,6 +285,8 @@ export class PikafishEngine {
       const bestmove = line.split(/\s+/)[1];
       if (this.pending) {
         const finished = this.pending;
+        clearTimeout(finished.watchdog);
+        clearTimeout(finished.stopWatchdog);
         this.pending = null;
         finished.resolve(bestmove);
         if (this.queued) {
@@ -297,27 +310,79 @@ export class PikafishEngine {
         this.queued.reject(error);
       }
       this.queued = request;
-      this.worker.postMessage({ type: 'command', command: 'stop' });
+      this.#stopPending();
     } else this.#startAnalysis(request);
     return promise;
   }
 
   #startAnalysis(request) {
     this.pending = request;
-    this.worker.postMessage({ type: 'command', command: `setoption name MultiPV value ${request.multiPv}` });
-    this.worker.postMessage({ type: 'command', command: `position fen ${boardToFen(request.board, request.side)}` });
+    this.#resetSearchWatchdog(request);
     const searchCommand = request.moveTime
       ? `go movetime ${Math.max(1, Math.trunc(request.moveTime))}`
       : `go depth ${request.depth}`;
-    this.worker.postMessage({ type: 'command', command: searchCommand });
+    try {
+      this.worker.postMessage({ type: 'command', command: `setoption name MultiPV value ${request.multiPv}` });
+      this.worker.postMessage({ type: 'command', command: `position fen ${boardToFen(request.board, request.side)}` });
+      this.worker.postMessage({ type: 'command', command: searchCommand });
+    } catch (error) {
+      this.#failWorker(new Error(`无法启动引擎搜索：${error.message}`));
+    }
+  }
+
+  #resetSearchWatchdog(request) {
+    clearTimeout(request.watchdog);
+    const timeout = request.moveTime
+      ? Math.max(15000, Math.min(request.moveTime + 15000, 180000))
+      : 120000;
+    if (request.moveTime) request.deadline ??= Date.now() + timeout;
+    const delay = request.moveTime ? Math.max(0, request.deadline - Date.now()) : timeout;
+    request.watchdog = setTimeout(() => {
+      if (this.pending !== request) return;
+      this.#failWorker(new Error(`搜索超过 ${Math.round(timeout / 1000)} 秒仍未结束，已停止引擎`));
+    }, delay);
+  }
+
+  #stopPending() {
+    const request = this.pending;
+    if (!request || !this.worker) return;
+    request.stopping = true;
+    clearTimeout(request.watchdog);
+    clearTimeout(request.stopWatchdog);
+    request.stopWatchdog = setTimeout(() => {
+      if (this.pending === request) this.#failWorker(new Error('引擎未响应停止命令，已停止引擎'));
+    }, 10000);
+    try {
+      this.worker.postMessage({ type: 'command', command: 'stop' });
+    } catch (error) {
+      this.#failWorker(new Error(`无法停止引擎：${error.message}`));
+    }
+  }
+
+  #failWorker(error) {
+    const failedWorker = this.worker;
+    failedWorker?.terminate();
+    this.worker = null;
+    this.ready = false;
+    if (this.pending) {
+      clearTimeout(this.pending.watchdog);
+      clearTimeout(this.pending.stopWatchdog);
+      this.pending.reject(error);
+      this.pending = null;
+    }
+    this.queued?.reject(error);
+    this.queued = null;
+    this.onUpdate({ type: 'runtime-error', message: error.message });
   }
 
   stop() {
-    if (this.pending) this.worker?.postMessage({ type: 'command', command: 'stop' });
+    this.#stopPending();
   }
 
   close() {
     const error = new Error('Pikafish 已关闭'); error.name = 'AbortError';
+    if (this.pending) clearTimeout(this.pending.watchdog);
+    if (this.pending) clearTimeout(this.pending.stopWatchdog);
     this.pending?.reject(error);
     this.queued?.reject(error);
     this.worker?.terminate();
