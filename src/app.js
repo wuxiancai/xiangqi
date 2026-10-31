@@ -7,7 +7,7 @@ import { playCaptureSpeech, playCheckSound, playMoveSound, playTacticSpeech } fr
 import { convertTextToRecord, extractText, findExistingImportedRecord, importXqfFolderFiles, MAX_IMPORT_SIZE, normalizeLegacyImportedRecord } from './importer.js';
 import { parseXqf, xqfMovesAsText } from './xqf.js';
 import { cblMovesAsText, parseCbl } from './cbl.js';
-import { engineMoveToICCS, formatRedEvaluation, PikafishEngine } from '../engine/pikafish/engine.js?v=engine-cdn-1';
+import { engineMoveToICCS, formatRedEvaluation, PikafishEngine } from '../engine/pikafish/engine.js?v=incompatible-pair-fallback-1';
 import { checkMobileAppUpdate } from './mobile-updater.js?v=1';
 import { setupPwaInstall } from './pwa.js?v=1';
 
