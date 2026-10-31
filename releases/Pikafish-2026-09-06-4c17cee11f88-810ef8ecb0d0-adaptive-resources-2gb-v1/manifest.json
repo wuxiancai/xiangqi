@@ -1,0 +1,41 @@
+{
+  "schema": "chuhe-pikafish/v1",
+  "engine_api": 1,
+  "build_profile": "adaptive-resources-2gb-v1",
+  "version": "Pikafish-2026-09-06",
+  "release_id": "Pikafish-2026-09-06-4c17cee11f88-810ef8ecb0d0-adaptive-resources-2gb-v1",
+  "commit": "4c17cee11f888ae1d48a9494f2e2239f019f0a1f",
+  "net_sha256": "810ef8ecb0d0697755deac0a1d956296d762132f63b74fc4f8658f2ec5203f5b",
+  "minimum_app_version": "1.0.0",
+  "assets": {
+    "worker.js": {
+      "sha256": "bedda82db39d1e0520b86d1673e0b8f7dc734b811996a2cd9ec6446f83255313",
+      "size": 5680
+    },
+    "pikafish.js": {
+      "sha256": "31b1d1c8754b07f5c68fb0ff74f7ec86c499d3a6424799d517d32466113056d3",
+      "size": 80181
+    },
+    "pikafish.wasm": {
+      "sha256": "b299c0409e1acf43a5d87422e5063408ab4bf545095420ea44f255c5e4b9886b",
+      "size": 662199
+    },
+    "pikafish.nnue": {
+      "sha256": "810ef8ecb0d0697755deac0a1d956296d762132f63b74fc4f8658f2ec5203f5b",
+      "size": 50309463
+    },
+    "COPYING.txt": {
+      "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+      "size": 35149
+    },
+    "NNUE-License.md": {
+      "sha256": "82f4e54011d7b49e87dae3a14305f4ce4fed01e605ec1aa8d32c82bcd387cd75",
+      "size": 1038
+    },
+    "version.json": {
+      "sha256": "369cabe750994faf7342b1c1f39b4a56dfd584d93866620aed96b1e261b0a8ad",
+      "size": 179
+    }
+  },
+  "base_url": "https://raw.githubusercontent.com/wuxiancai/xiangqi/engine-updates/releases/Pikafish-2026-09-06-4c17cee11f88-810ef8ecb0d0-adaptive-resources-2gb-v1/"
+}
