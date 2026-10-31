@@ -5,17 +5,43 @@ export function playMoveSound(audio, captured = false, side = 'red') {
     playCaptureSound(audio, now, side);
     return;
   }
-  const tone = audio.createOscillator();
-  const volume = audio.createGain();
-  tone.type = side === 'black' ? 'sine' : 'triangle';
-  tone.frequency.setValueAtTime(side === 'black' ? 490 : 620, now);
-  tone.frequency.exponentialRampToValueAtTime(side === 'black' ? 294 : 370, now + 0.075);
-  volume.gain.setValueAtTime(0.0001, now);
-  volume.gain.exponentialRampToValueAtTime(0.11, now + 0.008);
-  volume.gain.exponentialRampToValueAtTime(0.0001, now + 0.09);
-  tone.connect(volume).connect(audio.destination);
-  tone.start(now);
-  tone.stop(now + 0.095);
+  playWoodenMoveSound(audio, now, side);
+}
+
+function playWoodenMoveSound(audio, now, side) {
+  const darkPiece = side === 'black';
+  const body = audio.createOscillator();
+  const bodyVolume = audio.createGain();
+  body.type = 'sine';
+  body.frequency.setValueAtTime(darkPiece ? 185 : 225, now);
+  body.frequency.exponentialRampToValueAtTime(darkPiece ? 92 : 118, now + 0.07);
+  bodyVolume.gain.setValueAtTime(0.0001, now);
+  bodyVolume.gain.exponentialRampToValueAtTime(0.2, now + 0.003);
+  bodyVolume.gain.exponentialRampToValueAtTime(0.0001, now + 0.11);
+  body.connect(bodyVolume).connect(audio.destination);
+  body.start(now);
+  body.stop(now + 0.12);
+
+  const sampleRate = audio.sampleRate;
+  const buffer = audio.createBuffer(1, Math.ceil(sampleRate * 0.035), sampleRate);
+  const samples = buffer.getChannelData(0);
+  for (let index = 0; index < samples.length; index += 1) {
+    const envelope = Math.exp(-index / (sampleRate * 0.007));
+    samples[index] = (Math.random() * 2 - 1) * envelope;
+  }
+  const click = audio.createBufferSource();
+  const filter = audio.createBiquadFilter();
+  const clickVolume = audio.createGain();
+  click.buffer = buffer;
+  filter.type = 'bandpass';
+  filter.frequency.setValueAtTime(darkPiece ? 900 : 1250, now);
+  filter.Q.setValueAtTime(0.8, now);
+  clickVolume.gain.setValueAtTime(0.0001, now);
+  clickVolume.gain.exponentialRampToValueAtTime(0.16, now + 0.002);
+  clickVolume.gain.exponentialRampToValueAtTime(0.0001, now + 0.04);
+  click.connect(filter).connect(clickVolume).connect(audio.destination);
+  click.start(now);
+  click.stop(now + 0.04);
 }
 
 export function playCheckSound(speech = globalThis.speechSynthesis, Utterance = globalThis.SpeechSynthesisUtterance) {

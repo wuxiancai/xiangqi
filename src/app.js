@@ -3,22 +3,51 @@ import { chooseLocalMoveAsync, requestSuggestion } from './ai.js';
 import { loadSettings, recordRepository, saveSettings } from './storage.js';
 import { chineseNotation } from './notation.js';
 import { adjudicateRepetition } from './repetition.js';
-import { playCaptureSpeech, playCheckSound, playMoveSound, playTacticSpeech } from './audio.js?v=capture-voice-2';
-import { convertTextToRecord, extractText, findExistingImportedRecord, importXqfFolderFiles, MAX_IMPORT_SIZE } from './importer.js';
+import { playCaptureSpeech, playCheckSound, playMoveSound, playTacticSpeech } from './audio.js?v=wood-move-1';
+import { convertTextToRecord, extractText, findExistingImportedRecord, importXqfFolderFiles, MAX_IMPORT_SIZE, normalizeLegacyImportedRecord } from './importer.js';
 import { parseXqf, xqfMovesAsText } from './xqf.js';
 import { cblMovesAsText, parseCbl } from './cbl.js';
-import { engineMoveToICCS, formatRedEvaluation, PikafishEngine } from '../engine/pikafish/engine.js?v=full-strength-default-1';
+import { engineMoveToICCS, formatRedEvaluation, PikafishEngine } from '../engine/pikafish/engine.js?v=secure-context-diagnostics-1';
 
-const categories = ['古谱', '现代对局', '开局', '残局'];
+const categories = ['古谱', '现代对局', '开局', '中局', '残局'];
+const sourceCategoryRoots = {
+  古谱: ['古谱'],
+  现代对局: ['对局', '全局'],
+  开局: ['布局'],
+  中局: ['中局'],
+  残局: ['残局排局'],
+};
 const labels = { K: '帥', A: '仕', E: '相', R: '車', H: '馬', C: '炮', P: '兵', k: '將', a: '士', e: '象', r: '車', h: '馬', c: '炮', p: '卒' };
 const names = { red: '红方', black: '黑方' };
 const $ = (selector) => document.querySelector(selector);
 const state = {
-  view: 'study', records: [], builtinRecords: [], currentRecord: null, studyPly: 0, studyFlipped: false, selectedCategory: '', query: '', timer: null,
+  view: 'study', records: [], builtinRecords: [], currentRecord: null, studyPly: 0, studyFlipped: false, selectedCategory: '', selectedSourcePath: [], query: '', timer: null,
   expandedRecordGroups: new Set(), board: initialBoard(), side: RED, history: [], playFlipped: false, gameOver: false, adjudication: null, settings: {}, aiBusy: false,
   pikafish: null, engineAnalyses: { red: null, black: null }, engineAnalysisTask: null, engineAnalysisTarget: null,
+  aiVsAiRunning: false, aiMoveTimer: null,
 };
 let moveAudio;
+let checkmateAnimationTimer;
+
+function hideCheckmateAnimation() {
+  clearTimeout(checkmateAnimationTimer);
+  checkmateAnimationTimer = null;
+  const overlay = $('#checkmate-overlay');
+  if (overlay) overlay.hidden = true;
+}
+
+function showCheckmateAnimation(winner) {
+  if (winner !== RED && winner !== BLACK) return;
+  const overlay = $('#checkmate-overlay');
+  $('#checkmate-winner').textContent = `${names[winner]}获胜`;
+  overlay.dataset.winner = winner;
+  overlay.hidden = false;
+  overlay.classList.remove('is-showing');
+  void overlay.offsetWidth;
+  overlay.classList.add('is-showing');
+  clearTimeout(checkmateAnimationTimer);
+  checkmateAnimationTimer = setTimeout(hideCheckmateAnimation, 3000);
+}
 
 function toast(message) {
   const node = $('#toast');
