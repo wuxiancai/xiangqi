@@ -44,11 +44,12 @@
 .piece-label.red{fill:#a62f24;stroke:none}
 .piece-label.black{fill:#211f1c;stroke:none}
 .threat-ring.exposed{fill:#42d963;fill-opacity:.14;stroke:#39bf50;stroke-width:2;stroke-dasharray:10 6;filter:drop-shadow(0 0 1.5px #37da5b66)}
-.threat-ring,.selected-piece-ring,.last-move-origin-ring,.last-move-origin,.last-move-destination{transform-box:fill-box;transform-origin:center;animation:chess-ring-spin 16.8s linear infinite;pointer-events:none}
+.threat-ring,.selected-piece-ring{transform-box:fill-box;transform-origin:center;animation:chess-ring-spin 16.8s linear infinite;pointer-events:none}
 .selected-piece-ring{fill:none;stroke:#40805d;stroke-width:1.8;stroke-dasharray:11 6}
-.last-move-origin-ring{fill:none;stroke:#00cfff;stroke-width:2;stroke-dasharray:5 3;opacity:1;filter:drop-shadow(0 0 2px #073e6c) drop-shadow(0 0 3px #00cfff)}
-.last-move-origin{fill:none;stroke:#00cfff;stroke-width:2.2;stroke-dasharray:3 2;filter:drop-shadow(0 0 2px #073e6c) drop-shadow(0 0 3px #00cfff)}
-.last-move-destination{fill:none;stroke:#00cfff;stroke-width:2.4;stroke-dasharray:9 5;opacity:1;filter:drop-shadow(0 0 2px #073e6c) drop-shadow(0 0 4px #00cfff)}
+.last-move-origin-ring,.last-move-origin,.last-move-destination{pointer-events:none;animation:none}
+.last-move-origin-ring{fill:none;stroke:#00d9ff;stroke-width:2.5;stroke-dasharray:none;opacity:1;filter:drop-shadow(0 0 5px #00d9ff) drop-shadow(0 0 9px #00d9ff88)}
+.last-move-origin{fill:none;stroke:#00d9ff;stroke-width:2.5;stroke-dasharray:none;filter:drop-shadow(0 0 5px #00d9ff) drop-shadow(0 0 9px #00d9ff88)}
+.last-move-destination{fill:none;stroke:#00d9ff;stroke-width:2.5;stroke-dasharray:none;opacity:1;filter:drop-shadow(0 0 5px #00d9ff) drop-shadow(0 0 9px #00d9ff88)}
 @keyframes chess-ring-spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.threat-ring,.selected-piece-ring,.last-move-origin-ring,.last-move-origin,.last-move-destination{animation:none}}
 
