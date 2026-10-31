@@ -119,7 +119,7 @@ async function manifestAssets(manifest, onUpdate = () => {}) {
   }
   const wasmUrl = verifiedAssetUrl(manifest.base_url, 'pikafish.wasm', manifest.assets['pikafish.wasm']);
   const netUrl = verifiedAssetUrl(manifest.base_url, 'pikafish.nnue', manifest.assets['pikafish.nnue']);
-  const js = await verifiedScript(manifest.base_url, manifest.assets['pikafish.js']);
+  const js = await verifiedScript(manifest.base_url, manifest.assets['pikafish.js'], onUpdate);
   return {
     version: manifest,
     jsUrl: js,
@@ -195,7 +195,8 @@ export class PikafishEngine {
   }
 
   async start() {
-    if (globalThis.crossOriginIsolated !== true) return Promise.reject(new Error('当前站点未启用 COOP/COEP，无法启动多线程引擎；请使用项目自托管服务或配置隔离响应头'));
+    if (globalThis.isSecureContext !== true) return Promise.reject(new Error('Pikafish 多线程引擎要求安全上下文；公网请使用 HTTPS 域名访问，HTTP 仅 localhost 可用'));
+    if (globalThis.crossOriginIsolated !== true) return Promise.reject(new Error('当前页面未完成跨域隔离；请确保 HTML 响应包含 COOP: same-origin 和 COEP: require-corp，检查反向代理是否转发响应头'));
     if (this.worker) return this.ready ? Promise.resolve() : Promise.reject(new Error('Pikafish 正在初始化'));
     const assets = await loadEngineAssets((message) => this.onUpdate(message));
     this.onUpdate({ type: 'status', text: '正在启动 WebAssembly 引擎…' });
@@ -245,8 +246,8 @@ export class PikafishEngine {
           } else if (data.line === 'readyok' && !this.ready) {
             this.ready = true;
             clearTimeout(timer);
-            resolve();
             this.onUpdate({ type: 'ready' });
+            resolve();
           }
         } else if (data.type === 'error') {
           clearTimeout(timer);
@@ -254,8 +255,8 @@ export class PikafishEngine {
         }
       };
       worker.onerror = (event) => { clearTimeout(timer); reject(new Error(event.message || 'Pikafish Worker 加载失败')); };
-      worker.postMessage({ type: 'init', jsUrl: asset('pikafish.js', cacheVersion), wasmUrl: asset('pikafish.wasm', cacheVersion), netUrl: asset('pikafish.nnue', cacheVersion) });
-    }));
+      worker.postMessage({ type: 'init', ...assets });
+    });
   }
 
   #line(line) {
@@ -285,9 +286,9 @@ export class PikafishEngine {
   }
 
   // Supersede an in-flight position with the newest request after UCI stops.
-  analyze(board, side, { depth = 30, multiPv = 1 } = {}) {
+  analyze(board, side, { depth = 30, moveTime = null, multiPv = 1 } = {}) {
     if (!this.ready) return Promise.reject(new Error('Pikafish 尚未就绪'));
-    const request = { id: ++this.analysisId, board: [...board], side, depth, multiPv, lines: new Map() };
+    const request = { id: ++this.analysisId, board: [...board], side, depth, moveTime, multiPv, lines: new Map() };
     const promise = new Promise((resolve, reject) => { request.resolve = resolve; request.reject = reject; });
     promise.analysisId = request.id;
     if (this.pending) {
@@ -305,7 +306,10 @@ export class PikafishEngine {
     this.pending = request;
     this.worker.postMessage({ type: 'command', command: `setoption name MultiPV value ${request.multiPv}` });
     this.worker.postMessage({ type: 'command', command: `position fen ${boardToFen(request.board, request.side)}` });
-    this.worker.postMessage({ type: 'command', command: `go depth ${request.depth}` });
+    const searchCommand = request.moveTime
+      ? `go movetime ${Math.max(1, Math.trunc(request.moveTime))}`
+      : `go depth ${request.depth}`;
+    this.worker.postMessage({ type: 'command', command: searchCommand });
   }
 
   stop() {
@@ -317,12 +321,12 @@ export class PikafishEngine {
     this.pending?.reject(error);
     this.queued?.reject(error);
     this.worker?.terminate();
+    for (const url of this.objectUrls) URL.revokeObjectURL(url);
+    this.objectUrls = [];
     this.worker = null;
     this.ready = false;
     this.pending = null;
     this.queued = null;
-    for (const url of this.objectUrls) URL.revokeObjectURL(url);
-    this.objectUrls = [];
   }
 
 }

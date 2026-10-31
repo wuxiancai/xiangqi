@@ -312,3 +312,9 @@
 - 线上 `src/app.js` 末尾包含残留的不完整代码，引用未定义的 `message` 并抛出异常；Pikafish 下载进度也未接入首页提示框。修复引擎启动、进度/成功/失败提示回调，正确绑定关闭按钮和 PWA 安装初始化，并移除文件尾部残留代码。
 - Service Worker 缓存版本提升至 v91，便于部署后更新客户端缓存。
 - 通过线上资源检查确认此前 `src/app.js` 与当前 Service Worker/首页并非一致版本；更新需将本地修复后的完整项目文件重新部署到静态目录。完成 JS 语法检查、关键资源请求和补丁检查；未在手机浏览器完成现场交互验收。
+
+## 2026-10-31 线上页面仍无响应：修复 Pikafish 模块语法错误
+
+- Chrome 实机控制台确认线上入口因静态导入 `engine/pikafish/engine.js` 语法错误而无法执行：`Private field '#startWorker' must be declared in an enclosing class`。线上该文件在 `#startWorker` 调用/声明附近仍是损坏旧版本，含类外私有字段调用及错误的括号/未定义 `cacheVersion`，导致所有应用事件都未绑定。
+- 当前工作区 `engine.js` 已修正私有方法/Worker 初始化语法并保留版本下载进度回调。提交时需部署该文件；仅更新 app.js 和 Service Worker 不够。通过 `node --check` 验证当前修复文件。
+- 线上 HTTP IP 还导致 Chrome 忽略 COOP 响应头（不可信 origin），所以 Pikafish 多线程引擎仍需 HTTPS 域名访问并保留 COOP/COEP 响应头；这与页面按钮事件失效是两个独立问题。
