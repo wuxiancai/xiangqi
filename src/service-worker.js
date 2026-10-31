@@ -1,4 +1,4 @@
-const CACHE_NAME = 'chuhe-shell-v90';
+const CACHE_NAME = 'chuhe-shell-v91';
 const APP_SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon.svg', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-512-maskable.png', './icons/apple-touch-icon.png', './styles.css', './styles-import.css', './src/app.js', './src/pwa.js?v=1', './src/mobile-updater.js?v=1', './src/audio.js?v=wood-move-1', './src/importer.js', './src/xqf.js', './src/cbl.js', './src/rules.js', './src/notation.js', './src/repetition.js', './src/storage.js', './src/ai.js', './src/ai-worker.js', './engine/pikafish/engine.js?v=engine-cdn-2', './engine/pikafish/worker.js?v=engine-cdn-2', './data/records/modern-games.json'];
 
 self.addEventListener('install', (event) => {

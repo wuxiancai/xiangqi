@@ -889,9 +889,11 @@ async function requestPikafishAnalysis({ multiPv = 1 } = {}) {
 
 async function startPikafish({ automatic = false } = {}) {
   const button = $('#pikafish-start'); const status = $('#pikafish-status');
+  beginEngineDownloadNotice();
   button.disabled = true; button.textContent = '正在加载…';
   status.textContent = '正在下载并初始化引擎资源…';
   const engine = new PikafishEngine((message) => {
+    updateEngineDownloadNotice(message);
     if (message.type === 'progress') {
       status.textContent = message.total ? `下载 NNUE ${Math.round(message.loaded / message.total * 100)}%` : `下载 NNUE ${(message.loaded / 1048576).toFixed(1)} MiB`;
     } else if (message.type === 'status') status.textContent = message.text;
@@ -903,11 +905,13 @@ async function startPikafish({ automatic = false } = {}) {
   try {
     await engine.start();
     state.pikafish?.close(); state.pikafish = engine;
+    finishEngineDownloadNotice();
     status.textContent = engine.version?.version ? `已就绪 · Pikafish ${engine.version.version}` : '已就绪 · Pikafish WebAssembly';
     $('#pikafish-analyze').disabled = false;
     button.textContent = '引擎已加载';
     void requestPikafishAnalysis();
   } catch (error) {
+    finishEngineDownloadNotice(error);
     engine.close(); button.disabled = false; button.textContent = '重试加载';
     status.textContent = `加载失败：${error.message}`;
     if (!automatic) toast('Pikafish 加载失败，请查看引擎状态中的具体原因');
@@ -929,6 +933,10 @@ function setView(view) {
 
 function bindEvents() {
   installEnginePanel();
+  $('#engine-download-close').addEventListener('click', () => {
+    engineDownloadDismissed = true;
+    $('#engine-download-banner').hidden = true;
+  });
   document.addEventListener('pointerdown', unlockMoveAudio);
   document.addEventListener('keydown', unlockMoveAudio);
   document.querySelectorAll('.nav-button').forEach((button) => button.addEventListener('click', () => setView(button.dataset.view)));
@@ -981,6 +989,7 @@ async function initialize() {
   document.querySelector('[data-view="study"]').textContent = '棋谱复盘';
   document.querySelector('[data-view="play"]').textContent = 'AI 研究与对弈';
   bindEvents();
+  setupPwaInstall();
   try {
     const response = await fetch('./data/records/modern-games.json');
     if (response.ok) state.builtinRecords = await response.json();
@@ -1004,12 +1013,3 @@ async function initialize() {
 }
 
 initialize();
-  setupPwaInstall();
-  beginEngineDownloadNotice();
-    updateEngineDownloadNotice(message);
-    finishEngineDownloadNotice();
-    finishEngineDownloadNotice(error);
-  $('#engine-download-close').addEventListener('click', () => {
-    engineDownloadDismissed = true;
-    $('#engine-download-banner').hidden = true;
-  });
