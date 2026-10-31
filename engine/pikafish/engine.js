@@ -69,6 +69,9 @@ const asset = (name, version = '') => {
   return url.href;
 };
 const UPDATE_FEED = 'https://raw.githubusercontent.com/wuxiancai/xiangqi/engine-updates/manifest.json';
+const INCOMPATIBLE_ENGINE_NET_PAIRS = new Set([
+  '4c17cee11f888ae1d48a9494f2e2239f019f0a1f:810ef8ecb0d0697755deac0a1d956296d762132f63b74fc4f8658f2ec5203f5b',
+]);
 
 async function sha256(bytes) {
   const digest = await crypto.subtle.digest('SHA-256', bytes);
@@ -91,6 +94,9 @@ async function loadEngineAssets(onUpdate = () => {}) {
     latest = await response.json();
     if (latest.schema !== 'chuhe-pikafish/v1' || latest.engine_api !== 1 || !latest.base_url || !latest.assets) {
       throw new Error('版本清单格式不受支持');
+    }
+    if (INCOMPATIBLE_ENGINE_NET_PAIRS.has(`${latest.commit}:${latest.net_sha256}`)) {
+      throw new Error('线上 Pikafish 与 NNUE 版本不兼容，改用本机已验证引擎');
     }
     if (latest.commit === localVersion?.commit && latest.net_sha256 === localVersion?.net_sha256) {
       onUpdate({ type: 'status', text: '正在准备已缓存的引擎资源…' });
@@ -192,6 +198,8 @@ export class PikafishEngine {
     this.lines = [];
     this.version = null;
     this.objectUrls = [];
+    this.stderrLines = [];
+    this.uciLines = [];
   }
 
   async start() {
@@ -200,10 +208,12 @@ export class PikafishEngine {
     if (this.worker) return this.ready ? Promise.resolve() : Promise.reject(new Error('Pikafish 正在初始化'));
     const assets = await loadEngineAssets((message) => this.onUpdate(message));
     this.onUpdate({ type: 'status', text: '正在启动 WebAssembly 引擎…' });
-    const workerUrl = new URL('./worker.js?v=engine-runtime-guard-1', import.meta.url);
+    const workerUrl = new URL('./worker.js?v=engine-runtime-guard-6', import.meta.url);
     const workerResponse = await fetch(workerUrl, { method: 'HEAD', cache: 'no-store' });
     if (!workerResponse.ok) throw new Error(`引擎 Worker 不可用（HTTP ${workerResponse.status}）`);
     this.version = assets.version;
+    this.stderrLines = [];
+    this.uciLines = [];
     if (assets.jsUrl.startsWith('blob:')) this.objectUrls.push(assets.jsUrl);
     try {
       await this.#startWorker(workerUrl, assets);
@@ -235,11 +245,17 @@ export class PikafishEngine {
           this.onUpdate({ type: 'progress', asset: data.asset, loaded: data.loaded, total: data.total });
         } else if (data.type === 'status') {
           this.onUpdate({ type: 'status', text: data.text });
+        } else if (data.type === 'stderr') {
+          this.stderrLines.push(data.line);
+          if (this.stderrLines.length > 30) this.stderrLines.shift();
         } else if (data.type === 'line') {
+          this.uciLines.push(data.line);
+          if (this.uciLines.length > 100) this.uciLines.shift();
           if (this.pending && !this.pending.stopping) this.#resetSearchWatchdog(this.pending);
           this.#line(data.line);
           if (data.line === 'uciok' && !this.ready) {
             const threads = Math.max(1, Math.min(8, Number(navigator.hardwareConcurrency) || 1));
+            worker.postMessage({ type: 'command', command: 'setoption name EvalFile value /pikafish.nnue' });
             worker.postMessage({ type: 'command', command: `setoption name Threads value ${threads}` });
             worker.postMessage({ type: 'command', command: 'setoption name Hash value 256' });
             worker.postMessage({ type: 'command', command: 'setoption name UCI_ShowWDL value true' });
@@ -251,7 +267,9 @@ export class PikafishEngine {
             resolve();
           }
         } else if (data.type === 'error') {
-          const error = new Error(data.message || 'Pikafish 初始化失败');
+          const criticalLines = this.uciLines.filter((line) => /CRITICAL ERROR|ERROR:|failed to|no space|memory/i.test(line)).slice(-8);
+          const diagnostics = [...criticalLines, ...this.stderrLines.slice(-8)].join(' · ');
+          const error = new Error([data.message || 'Pikafish 初始化失败', diagnostics && `引擎输出：${diagnostics}`].filter(Boolean).join('；'));
           if (this.ready) this.#failWorker(error);
           else { clearTimeout(timer); reject(error); }
         }

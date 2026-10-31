@@ -117,6 +117,17 @@ self.addEventListener('message', async (event) => {
       self.postMessage({ type: 'error', message: 'Pikafish worker is not ready' });
       return;
     }
-    command(message.command);
+    try {
+      const result = command(message.command);
+      if (result && typeof result.then === 'function') {
+        result.catch((error) => {
+          const details = error?.status == null ? '' : `（退出码 ${error.status}）`;
+          self.postMessage({ type: 'error', message: `执行 UCI 命令“${message.command}”失败${details}：${error?.message || String(error)}` });
+        });
+      }
+    } catch (error) {
+      const details = error?.status == null ? '' : `（退出码 ${error.status}）`;
+      self.postMessage({ type: 'error', message: `执行 UCI 命令“${message.command}”失败${details}：${error?.message || String(error)}` });
+    }
   }
 });
