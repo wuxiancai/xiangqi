@@ -31,6 +31,19 @@
       <button id="settings-button" class="quiet-button">设置</button>
     </header>
 
+    <aside id="engine-download-banner" class="engine-download-banner" data-state="loading" role="status" aria-live="polite" aria-atomic="false" hidden>
+      <span class="engine-download-mark" aria-hidden="true">棋</span>
+      <div class="engine-download-copy">
+        <strong id="engine-download-title">正在准备 Pikafish 引擎</strong>
+        <span id="engine-download-message">首次运行需要下载引擎程序和棋力网络，请保持页面打开。棋谱学习仍可继续使用。</span>
+        <span id="engine-download-stage" class="engine-download-stage" aria-live="off">正在连接更新源…</span>
+        <div id="engine-download-track" class="engine-download-track" role="progressbar" aria-label="引擎资源下载进度" aria-valuemin="0" aria-valuemax="100" aria-valuetext="正在准备">
+          <span id="engine-download-fill"></span>
+        </div>
+      </div>
+      <button id="engine-download-close" class="engine-download-close" type="button" aria-label="关闭下载提示">×</button>
+    </aside>
+
     <main>
       <section id="study-view" class="view active">
         <div class="study-layout">

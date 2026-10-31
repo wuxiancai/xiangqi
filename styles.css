@@ -180,3 +180,22 @@ button:active,.import-button:active{transform:translateY(1px)}
 .pwa-install-button[hidden]{display:none}
 .pwa-install-steps{padding-left:22px;color:#59675e;font-size:12px;line-height:1.8}
 .pwa-install-steps li+li{margin-top:8px}
+
+.engine-download-banner{position:fixed;z-index:8;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));display:grid;grid-template-columns:42px minmax(0,1fr) 34px;align-items:center;gap:12px;width:min(560px,calc(100vw - 24px));padding:14px 15px;border:1px solid #dcd3bd;border-radius:14px;background:#fffdf8;color:#303a32;box-shadow:0 14px 44px #29261f33;transform:translateX(-50%)}
+.engine-download-banner[hidden]{display:none}
+.engine-download-mark{display:grid;place-items:center;width:42px;height:42px;border-radius:12px;background:linear-gradient(145deg,#34745b,#204d3d);color:#fff5d9;font-family:'Noto Serif SC',serif;font-size:22px;box-shadow:0 4px 10px #204d3d33}
+.engine-download-copy{display:grid;min-width:0;gap:4px}
+.engine-download-copy strong{font-size:13px;font-weight:700}
+.engine-download-copy>span{font-size:11px;line-height:1.45;color:#68746b}
+.engine-download-stage{overflow-wrap:anywhere}
+.engine-download-track{height:5px;margin-top:3px;overflow:hidden;border-radius:99px;background:#e8e6dc}
+.engine-download-track>span{display:block;width:0;height:100%;border-radius:inherit;background:linear-gradient(90deg,#27b9cc,#3475d2);transition:width .18s ease}
+.engine-download-track>span.indeterminate{width:38%;background:linear-gradient(90deg,#27b9cc,#3475d2,#27b9cc);background-size:200% 100%;animation:engine-download-sweep 1.15s ease-in-out infinite}
+.engine-download-close{width:34px;height:34px;border:1px solid #e5dfd2;border-radius:8px;background:#fff;color:#68746b;font-size:21px;line-height:1}
+.engine-download-banner[data-state="error"]{border-color:#e8b9aa;background:#fff9f6}
+.engine-download-banner[data-state="error"] .engine-download-mark{background:linear-gradient(145deg,#b9503d,#963c30)}
+.engine-download-banner[data-state="ready"]{border-color:#b9d2bd;background:#fbfff9}
+.engine-download-banner[data-state="ready"] .engine-download-track>span{background:#328259}
+@keyframes engine-download-sweep{0%{transform:translateX(-110%)}100%{transform:translateX(270%)}}
+@media(max-width:480px){.engine-download-banner{grid-template-columns:36px minmax(0,1fr) 32px;gap:9px;padding:12px}.engine-download-mark{width:36px;height:36px;font-size:19px}.engine-download-copy strong{font-size:12px}.engine-download-copy>span{font-size:10px}}
+@media(prefers-reduced-motion:reduce){.engine-download-track>span{transition:none}.engine-download-track>span.indeterminate{animation:none;width:100%;opacity:.55}}

@@ -30,6 +30,128 @@ const state = {
 };
 let moveAudio;
 let checkmateAnimationTimer;
+let engineDownloadBannerTimer;
+let engineDownloadHideTimer;
+let engineDownloadDismissed = false;
+let engineDownloadNoticeShown = false;
+let engineProgressLastPaint = 0;
+const engineDownloadProgress = new Map();
+
+function beginEngineDownloadNotice() {
+  clearTimeout(engineDownloadBannerTimer);
+  clearTimeout(engineDownloadHideTimer);
+  engineDownloadDismissed = false;
+  engineDownloadNoticeShown = false;
+  engineProgressLastPaint = 0;
+  engineDownloadProgress.clear();
+  const banner = $('#engine-download-banner');
+  const title = $('#engine-download-title');
+  const message = $('#engine-download-message');
+  const stage = $('#engine-download-stage');
+  const track = $('#engine-download-track');
+  const fill = $('#engine-download-fill');
+  if (!banner || !title || !message || !stage || !track || !fill) return;
+  banner.dataset.state = 'loading';
+  title.textContent = '正在准备 Pikafish 引擎';
+  message.textContent = '首次运行需要下载引擎程序和棋力网络，请保持页面打开。棋谱学习仍可继续使用。';
+  stage.textContent = '正在连接更新源…';
+  track.removeAttribute('aria-valuenow');
+  track.setAttribute('aria-valuetext', '正在准备');
+  fill.style.width = '';
+  fill.classList.add('indeterminate');
+  banner.hidden = true;
+  engineDownloadBannerTimer = setTimeout(() => {
+    engineDownloadBannerTimer = null;
+    if (!engineDownloadDismissed) banner.hidden = false;
+  }, 350);
+}
+
+function showEngineDownloadNotice() {
+  if (engineDownloadDismissed) return;
+  clearTimeout(engineDownloadBannerTimer);
+  const banner = $('#engine-download-banner');
+  if (banner) {
+    engineDownloadNoticeShown = true;
+    banner.hidden = false;
+  }
+}
+
+function updateEngineDownloadNotice(update) {
+  const stage = $('#engine-download-stage');
+  const track = $('#engine-download-track');
+  const fill = $('#engine-download-fill');
+  if (!stage || !track || !fill) return;
+  if (update.type === 'status') {
+    stage.textContent = update.text;
+    if (!engineDownloadBannerTimer) showEngineDownloadNotice();
+    return;
+  }
+  if (update.type !== 'progress') return;
+  engineDownloadProgress.set(update.asset, { loaded: update.loaded, total: update.total });
+  const now = performance.now();
+  if (now - engineProgressLastPaint < 300 && (!update.total || update.loaded < update.total)) return;
+  engineProgressLastPaint = now;
+  const names = { js: '引擎程序', wasm: 'WebAssembly 文件', nnue: '棋力网络' };
+  const name = names[update.asset] ?? '引擎资源';
+  const loaded = (update.loaded / 1048576).toFixed(1);
+  const total = update.total ? (update.total / 1048576).toFixed(1) : null;
+  const percent = update.total ? Math.min(100, Math.round(update.loaded / update.total * 100)) : null;
+  const entries = [...engineDownloadProgress.entries()].map(([asset, progress]) => {
+    const assetName = names[asset] ?? '引擎资源';
+    const received = (progress.loaded / 1048576).toFixed(1);
+    return progress.total
+      ? `${assetName} ${received}/${(progress.total / 1048576).toFixed(1)} MiB（${Math.min(100, Math.round(progress.loaded / progress.total * 100))}%）`
+      : `${assetName} 已接收 ${received} MiB`;
+  });
+  stage.textContent = entries.join(' · ');
+  if (percent === null) {
+    track.removeAttribute('aria-valuenow');
+    track.setAttribute('aria-valuetext', `正在下载${name}，已接收 ${loaded} MiB`);
+    fill.classList.add('indeterminate');
+    fill.style.width = '';
+  } else {
+    track.setAttribute('aria-valuenow', String(percent));
+    track.setAttribute('aria-valuetext', `${name} ${percent}%`);
+    fill.classList.remove('indeterminate');
+    fill.style.width = `${percent}%`;
+  }
+  showEngineDownloadNotice();
+}
+
+function finishEngineDownloadNotice(error = null) {
+  clearTimeout(engineDownloadBannerTimer);
+  clearTimeout(engineDownloadHideTimer);
+  const banner = $('#engine-download-banner');
+  if (!banner) return;
+  if (error) {
+    banner.dataset.state = 'error';
+    $('#engine-download-title').textContent = 'Pikafish 暂时无法完成启动';
+    $('#engine-download-message').textContent = `${error.message}。你可以继续浏览棋谱，稍后在 Pikafish 面板中重试。`;
+    $('#engine-download-stage').textContent = '下载或初始化失败';
+    const fill = $('#engine-download-fill');
+    fill.classList.remove('indeterminate');
+    fill.style.width = '0';
+    $('#engine-download-track').removeAttribute('aria-valuenow');
+    $('#engine-download-track').setAttribute('aria-valuetext', '下载失败');
+    showEngineDownloadNotice();
+    return;
+  }
+  if (engineDownloadDismissed || !engineDownloadNoticeShown) {
+    banner.hidden = true;
+    return;
+  }
+  banner.dataset.state = 'ready';
+  $('#engine-download-title').textContent = 'Pikafish 引擎已准备完成';
+  $('#engine-download-message').textContent = '资源已下载并通过校验，可以开始使用。';
+  $('#engine-download-stage').textContent = '准备完成';
+  $('#engine-download-track').setAttribute('aria-valuenow', '100');
+  $('#engine-download-track').setAttribute('aria-valuetext', '准备完成');
+  const fill = $('#engine-download-fill');
+  fill.classList.remove('indeterminate');
+  fill.style.width = '100%';
+  showEngineDownloadNotice();
+  engineDownloadHideTimer = setTimeout(() => { banner.hidden = true; }, 1800);
+}
 
 function hideCheckmateAnimation() {
   clearTimeout(checkmateAnimationTimer);
@@ -883,3 +1005,11 @@ async function initialize() {
 
 initialize();
   setupPwaInstall();
+  beginEngineDownloadNotice();
+    updateEngineDownloadNotice(message);
+    finishEngineDownloadNotice();
+    finishEngineDownloadNotice(error);
+  $('#engine-download-close').addEventListener('click', () => {
+    engineDownloadDismissed = true;
+    $('#engine-download-banner').hidden = true;
+  });

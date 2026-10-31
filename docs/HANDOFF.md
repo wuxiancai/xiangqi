@@ -296,4 +296,9 @@
 - 增加 Web App Manifest、192/512 px 图标与 iOS 主屏图标；Android 支持浏览器安装提示，iOS 显示 Safari“添加到主屏幕”步骤。
 - Service Worker 更新至 v89，将清单和图标纳入应用壳缓存；离线导航可回退至已缓存首页。Pikafish 远端版本检查与引擎文件下载仍需联网。
 - 部署要求 HTTPS（`localhost` 开发例外），不需要 Docker、Apple/Google 开发者账号或商店上架。移动设备实机验收待完成。
+## 2026-10-31 首次运行引擎下载提示
+
+- 首次启动时显示浮动准备提示，说明需要下载引擎程序、WASM 和 NNUE 棋力网络，并告知用户仍可浏览棋谱；下载进度显示各资源已接收大小及服务器提供长度时的百分比。
+- 下载完成后提示引擎可用；网络或初始化失败时保留错误信息并提示可在引擎面板重试。用户可关闭提示，不会取消下载。
+- 更新 Pikafish 模块资源查询参数与 Service Worker 缓存版本至 v90，避免旧缓存继续使用不带进度的引擎模块。
 - Service Worker shell 缓存升至 v63。尚未实际部署云服务器或运行测试；需在目标 Linux 主机执行 `sudo python3 scripts/deploy.py`，并按输出端口配置防火墙/反向代理。`git diff --check` 待本轮收尾执行。
