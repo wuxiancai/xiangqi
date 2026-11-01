@@ -337,3 +337,9 @@
 - Chrome 控制台复现启动错误：`/src/app.js:7` 从 `./importer.js` 导入 `normalizeLegacyImportedRecord`，但服务器上的 `/src/importer.js` 未导出该函数；ES Module 链接失败后，棋盘、棋谱库和事件初始化均未执行，页面显示空棋盘及 0 盘棋谱。
 - 远端文件时间佐证版本不一致：`app.js` 与 `service-worker.js` Last-Modified 为 2026-11-01 02:11:54 UTC；`importer.js` 仍是 2026-10-18 00:09:10 UTC。本机 `src/importer.js` 已含该导出。应将 app.js 与 importer.js 作为同一版本一起部署，并确保 Service Worker 所引用的应用文件来自同一次发布。
 - HTTPS 本身可握手，Let's Encrypt 证书 SAN 覆盖 `*.kartso.cn`，有效期 2026-11-01 至 2027-01-30；首页返回 200 且含 COOP/COEP/CORP。普通 HTTP 域名请求另返回阿里云 ICP 未备案拦截页 403，不是本次 HTTPS 页面空白的主因。
+
+
+## 2026-11-01 修复停止服务后部署端口顺延
+
+- Linux/macOS 部署端口探测 socket 在绑定前设置 `SO_REUSEADDR`，与 Python HTTPServer 的监听方式一致。Linux 上服务停止后仍处于 `TIME_WAIT` 的已关闭连接不再导致 8002 被误判占用并选到 8003；Windows 保持原探测语义，避免 `SO_REUSEADDR` 在 Windows 上造成活动端口误判。
+- 通过 Python 语法检查和 `git diff --check`；未在 Linux 云服务器上复现或验证真实 TIME_WAIT 场景。

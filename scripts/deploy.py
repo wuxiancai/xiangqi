@@ -34,6 +34,10 @@ def validate_port():
         raise SystemExit("PORT 必须是 1–65535 范围内的整数。")
     for candidate in range(port, 65536):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+            # Match HTTPServer reuse semantics so Linux TIME_WAIT sockets do not
+            # make a stopped service port look occupied during deployment.
+            if platform.system() != "Windows":
+                probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             try:
                 probe.bind(("0.0.0.0", candidate))
             except OSError:
