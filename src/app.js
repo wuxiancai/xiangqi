@@ -7,7 +7,7 @@ import { playCaptureSpeech, playCheckSound, playMoveSound, playTacticSpeech } fr
 import { convertTextToRecord, extractText, findExistingImportedRecord, importXqfFolderFiles, MAX_IMPORT_SIZE, normalizeLegacyImportedRecord } from './importer.js';
 import { parseXqf, xqfMovesAsText } from './xqf.js';
 import { cblMovesAsText, parseCbl } from './cbl.js';
-import { engineMoveToICCS, formatRedEvaluation, getPikafishResourceConfig, PikafishEngine } from '../engine/pikafish/engine.js?v=local-first-startup-1';
+import { engineMoveToICCS, formatRedEvaluation, getPikafishResourceConfig, PikafishEngine } from '../engine/pikafish/engine.js?v=game-history-repetition-1';
 import { checkMobileAppUpdate } from './mobile-updater.js?v=1';
 import { setupPwaInstall } from './pwa.js?v=1';
 
@@ -1114,7 +1114,13 @@ async function requestPikafishAnalysis({ multiPv = 1 } = {}) {
     }
   }
   const searchConfig = getPikafishSearchConfig($('#pikafish-depth').value);
-  const task = state.pikafish.analyze(board, side, { ...searchConfig, multiPv });
+  const firstMove = state.history[0];
+  const positionHistory = firstMove ? {
+    board: firstMove.previousBoard,
+    side: firstMove.previousSide,
+    moves: state.history.map(({ move }) => move),
+  } : { board, side, moves: [] };
+  const task = state.pikafish.analyze(board, side, { ...searchConfig, multiPv, positionHistory });
   const analysisId = task.analysisId;
   const analysis = { analysisId, board, side, position, ply: state.history.length, ...searchConfig, lines: [], status: '分析中' };
   state.engineAnalyses[side] = analysis;

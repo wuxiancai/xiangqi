@@ -56,3 +56,4 @@
 - [ ] 创建原生 Android/iOS 工程后，接入 App 版本提示、下载地址和用户手动安装流程；iOS 需先确定签名和设备分发方案。
 - [x] 首次运行 Pikafish 时提示资源下载和阶段；显示引擎脚本、WASM 与 NNUE 下载进度、完成状态及失败重试提示。
 - [x] Pikafish 运行时 Worker 错误可中断挂起分析并显示可重试状态；加入搜索无响应 watchdog，并刷新 PWA shell / engine / worker 缓存版本。macOS PWA 实机复验待完成。
+- [x] Pikafish 分析携带本局根局面和完整历史着法，使引擎能在搜索时考虑长将、长捉重复规则；应用端继续负责最终裁决。

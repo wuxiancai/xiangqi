@@ -26,6 +26,17 @@ export function engineMoveToICCS(move) {
   return `${move[0]}${9 - Number(move[1])}${move[2]}${9 - Number(move[3])}`;
 }
 
+function appMoveToUci(move) {
+  const coordinate = (square) => {
+    if (!Number.isInteger(square) || square < 0 || square >= 90) throw new Error(`无效的应用着法坐标：${square}`);
+    const file = String.fromCharCode(97 + square % 9);
+    const rank = 9 - Math.floor(square / 9);
+    return `${file}${rank}`;
+  };
+  if (!move || typeof move !== 'object') throw new Error('无效的应用着法');
+  return `${coordinate(move.from)}${coordinate(move.to)}`;
+}
+
 export function getPikafishResourceConfig(capabilities = globalThis.navigator ?? {}, buildProfile = '') {
   const reportedThreads = Number(capabilities.hardwareConcurrency) || 1;
   const reportedMemoryGiB = Number(capabilities.deviceMemory) || 2;
@@ -354,9 +365,12 @@ export class PikafishEngine {
   }
 
   // Supersede an in-flight position with the newest request after UCI stops.
-  analyze(board, side, { depth = 30, moveTime = null, multiPv = 1 } = {}) {
+  analyze(board, side, { depth = 30, moveTime = null, multiPv = 1, positionHistory = null } = {}) {
     if (!this.ready) return Promise.reject(new Error('Pikafish 尚未就绪'));
-    const request = { id: ++this.analysisId, board: [...board], side, depth, moveTime, multiPv, lines: new Map() };
+    const rootBoard = positionHistory?.board ?? board;
+    const rootSide = positionHistory?.side ?? side;
+    const moves = positionHistory?.moves ?? [];
+    const request = { id: ++this.analysisId, board: [...board], side, rootBoard: [...rootBoard], rootSide, moves: moves.map(appMoveToUci), depth, moveTime, multiPv, lines: new Map() };
     const promise = new Promise((resolve, reject) => { request.resolve = resolve; request.reject = reject; });
     promise.analysisId = request.id;
     if (this.pending) {
@@ -378,7 +392,10 @@ export class PikafishEngine {
       : `go depth ${request.depth}`;
     try {
       this.worker.postMessage({ type: 'command', command: `setoption name MultiPV value ${request.multiPv}` });
-      this.worker.postMessage({ type: 'command', command: `position fen ${boardToFen(request.board, request.side)}` });
+      // FEN alone loses repetition context. Replay the game from its root so
+      // Pikafish can apply its long-check/chase judgement to the current line.
+      const moveSuffix = request.moves.length ? ` moves ${request.moves.join(' ')}` : '';
+      this.worker.postMessage({ type: 'command', command: `position fen ${boardToFen(request.rootBoard, request.rootSide)}${moveSuffix}` });
       this.worker.postMessage({ type: 'command', command: searchCommand });
     } catch (error) {
       this.#failWorker(new Error(`无法启动引擎搜索：${error.message}`));
