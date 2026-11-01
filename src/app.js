@@ -1260,7 +1260,18 @@ function bindEvents() {
     else if ($('#mode-select').value === 'ai' && $('#side-select').value === 'black') scheduleAiMove();
     else if (state.pikafish?.ready) void requestPikafishAnalysis();
   });
-  $('#mode-select').addEventListener('change', () => { hideCheckmateAnimation(); clearTimeout(state.aiMoveTimer); state.aiMoveTimer = null; state.aiVsAiRunning = $('#mode-select').value === 'ai-vs-ai'; resetEngineAnalyses(); state.board = initialBoard(); state.side = RED; state.history = []; state.gameOver = false; state.adjudication = null; state.repetitionPending = null; renderPlayBoard(); saveGame(); if ($('#mode-select').value === 'ai-vs-ai') queueAiMove(); else if ($('#mode-select').value === 'ai' && $('#side-select').value === 'black') scheduleAiMove(); else if (state.pikafish?.ready) void requestPikafishAnalysis(); });
+  $('#mode-select').addEventListener('change', () => {
+    hideCheckmateAnimation();
+    clearTimeout(state.aiMoveTimer); state.aiMoveTimer = null;
+    const mode = $('#mode-select').value;
+    state.aiVsAiRunning = mode === 'ai-vs-ai' && !state.gameOver;
+    state.selectedSquare = null;
+    resetEngineAnalyses();
+    renderPlayBoard(); saveGame();
+    if (mode === 'ai-vs-ai' && state.aiVsAiRunning) queueAiMove();
+    else if (mode === 'ai' && state.side !== $('#side-select').value && !state.gameOver) void scheduleAiMove();
+    else if (state.pikafish?.ready && !state.gameOver) void requestPikafishAnalysis();
+  });
   $('#side-select').addEventListener('change', () => { if ($('#mode-select').value === 'ai') { hideCheckmateAnimation(); resetEngineAnalyses(); state.board = initialBoard(); state.side = RED; state.history = []; state.gameOver = false; state.adjudication = null; state.repetitionPending = null; renderPlayBoard(); saveGame(); if ($('#side-select').value === 'black') scheduleAiMove(); else if (state.pikafish?.ready) void requestPikafishAnalysis(); } });
   $('#pikafish-start').addEventListener('click', startPikafish);
   $('#pikafish-analyze').addEventListener('click', analyzePikafish);
