@@ -224,7 +224,7 @@ export class PikafishEngine {
     if (this.worker) return this.ready ? Promise.resolve() : Promise.reject(new Error('Pikafish 正在初始化'));
     const assets = await loadEngineAssets((message) => this.onUpdate(message));
     this.onUpdate({ type: 'status', text: '正在启动 WebAssembly 引擎…' });
-    const workerUrl = new URL('./worker.js?v=engine-runtime-guard-7', import.meta.url);
+    const workerUrl = new URL('./worker.js?v=engine-runtime-guard-8', import.meta.url);
     const workerResponse = await fetch(workerUrl, { method: 'HEAD', cache: 'no-store' });
     if (!workerResponse.ok) throw new Error(`引擎 Worker 不可用（HTTP ${workerResponse.status}）`);
     this.version = assets.version;
@@ -252,8 +252,14 @@ export class PikafishEngine {
     return new Promise((resolve, reject) => {
       const worker = new Worker(workerUrl);
       this.worker = worker;
-      const timer = setTimeout(() => reject(new Error('引擎初始化超时')), 120000);
+      let timer;
+      const resetInitializationTimer = () => {
+        clearTimeout(timer);
+        timer = setTimeout(() => reject(new Error('引擎初始化超时（资源下载或引擎响应超过 3 分钟）')), 180000);
+      };
+      resetInitializationTimer();
       worker.onmessage = ({ data }) => {
+        if (['ready', 'asset-progress', 'status', 'line'].includes(data.type)) resetInitializationTimer();
         if (data.type === 'ready') {
           worker.postMessage({ type: 'command', command: 'uci' });
           this.onUpdate({ type: 'status', text: '引擎已加载，正在握手…' });
