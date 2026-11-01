@@ -83,6 +83,9 @@ const UPDATE_FEED = 'https://raw.githubusercontent.com/wuxiancai/xiangqi/engine-
 const INCOMPATIBLE_ENGINE_NET_PAIRS = new Set([
   '4c17cee11f888ae1d48a9494f2e2239f019f0a1f:810ef8ecb0d0697755deac0a1d956296d762132f63b74fc4f8658f2ec5203f5b',
 ]);
+const VERIFIED_LOCAL_ENGINE_NET_PAIRS = new Set([
+  '6a59ee2f7b105bff64d9efc2692591107787e2b1:7d13d73569a9b571ba0eb20cf1596247bc2a42738967e61afef6482b231e900e',
+]);
 
 async function sha256(bytes) {
   const digest = await crypto.subtle.digest('SHA-256', bytes);
@@ -94,7 +97,10 @@ async function loadEngineAssets(onUpdate = () => {}) {
   let localVersion = null;
   try {
     const response = await fetch(asset('version.json'), { cache: 'no-store' });
-    if (response.ok) localVersion = await response.json();
+    if (response.ok) {
+      const version = await response.json();
+      if (VERIFIED_LOCAL_ENGINE_NET_PAIRS.has(`${version.commit}:${version.net_sha256}`)) localVersion = version;
+    }
   } catch {}
 
   let latest = null;
@@ -119,14 +125,15 @@ async function loadEngineAssets(onUpdate = () => {}) {
   } catch (error) {
     latestError = error;
   }
-  if (latest?.fallback) {
-    try { return await manifestAssets(latest.fallback, onUpdate); }
-    catch (fallbackError) { latestError = new Error(`${latestError.message}；回退版本也不可用：${fallbackError.message}`); }
-  }
   if (localVersion) {
     onUpdate({ type: 'status', text: '在线版本暂不可用，正在准备本机引擎…' });
     return localAssets(localVersion);
   }
+  if (latest?.fallback && !INCOMPATIBLE_ENGINE_NET_PAIRS.has(`${latest.fallback.commit}:${latest.fallback.net_sha256}`)) {
+    try { return await manifestAssets(latest.fallback, onUpdate); }
+    catch (fallbackError) { latestError = new Error(`${latestError.message}；回退版本也不可用：${fallbackError.message}`); }
+  }
+  if (latest && !localVersion) latestError = new Error(`${latestError?.message ?? '线上引擎不可用'}；服务器未部署已验证的本机引擎资源`);
   throw new Error(`无法检查或下载最新 Pikafish：${latestError?.message ?? '版本服务不可用'}`);
 }
 
