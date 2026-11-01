@@ -34,6 +34,7 @@ npm test
 - 已实现棋谱检索、分类、JSON 导入、逐着回放、自动播放和本地持久化。
 - 已实现本地双人、基础搜索 AI、兼容 Chat Completions API 的建议接口、着法合法性检查及本地降级。
 - 内置库当前收录 36 盘现代大师对局和 40 盘残局，共 76 盘，着法均通过规则校验。现代/残局数据源为 [Chinese Chess Practical Dataset（CC BY 4.0）](https://github.com/Yvonne761/Chinese-Chess-Practical-Dataset)，来源、版本和归属见 `data/ATTRIBUTION.md`。古谱《梅花谱》《橘中秘》《适情雅趣》尚未录入；100 盘首版目标未达成，不应将当前版本视为完整内容交付。
+- 仓库同时包含 `data/imported/` 中通过本地导入保存的棋谱（当前 27,300 盘），克隆项目即可在自托管部署中加载，无需重新导入。这些记录的来源字段标明“用户导入；来源与使用许可待确认”，并不代表版权或再分发许可已核实。用户自行保存的本机对局不纳入仓库。
 - 首版导入仅支持 `xiangqi-study/v1` JSON（最大 2 MiB）；XQF、PGN、ICCS 文本解析仍延后。
 - 内置 AI 棋力未经认证；API 模型强度无法与引擎等级等同。API 密钥存于当前浏览器 IndexedDB，浏览器直连服务商存在密钥暴露与 CORS 限制。
 - 自托管静态文件可由 HTTPS 静态站点托管；首版无后端进程，因此无需 systemd 服务。

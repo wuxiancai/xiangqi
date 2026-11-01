@@ -1,5 +1,5 @@
-data/imported/*.json
 data/imported/*.tmp
+data/imported/2d17dd94b9c7375ac191e6595bea178e4673ddaa7eaa2064089439c4da3b7562.json
 .build/
 engine/pikafish/dist/
 engine/pikafish/.dist-update-*/
