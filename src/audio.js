@@ -12,21 +12,33 @@ function playWoodenMoveSound(audio, now, side) {
   const darkPiece = side === 'black';
   const body = audio.createOscillator();
   const bodyVolume = audio.createGain();
-  body.type = 'sine';
-  body.frequency.setValueAtTime(darkPiece ? 185 : 225, now);
-  body.frequency.exponentialRampToValueAtTime(darkPiece ? 92 : 118, now + 0.07);
+  body.type = 'triangle';
+  body.frequency.setValueAtTime(darkPiece ? 285 : 340, now);
+  body.frequency.exponentialRampToValueAtTime(darkPiece ? 205 : 245, now + 0.045);
   bodyVolume.gain.setValueAtTime(0.0001, now);
-  bodyVolume.gain.exponentialRampToValueAtTime(0.2, now + 0.003);
-  bodyVolume.gain.exponentialRampToValueAtTime(0.0001, now + 0.11);
+  bodyVolume.gain.exponentialRampToValueAtTime(0.19, now + 0.0015);
+  bodyVolume.gain.exponentialRampToValueAtTime(0.0001, now + 0.075);
   body.connect(bodyVolume).connect(audio.destination);
   body.start(now);
-  body.stop(now + 0.12);
+  body.stop(now + 0.08);
+
+  const resonance = audio.createOscillator();
+  const resonanceVolume = audio.createGain();
+  resonance.type = 'sine';
+  resonance.frequency.setValueAtTime(darkPiece ? 155 : 190, now);
+  resonance.frequency.exponentialRampToValueAtTime(darkPiece ? 120 : 145, now + 0.06);
+  resonanceVolume.gain.setValueAtTime(0.0001, now);
+  resonanceVolume.gain.exponentialRampToValueAtTime(0.075, now + 0.002);
+  resonanceVolume.gain.exponentialRampToValueAtTime(0.0001, now + 0.085);
+  resonance.connect(resonanceVolume).connect(audio.destination);
+  resonance.start(now);
+  resonance.stop(now + 0.09);
 
   const sampleRate = audio.sampleRate;
-  const buffer = audio.createBuffer(1, Math.ceil(sampleRate * 0.035), sampleRate);
+  const buffer = audio.createBuffer(1, Math.ceil(sampleRate * 0.012), sampleRate);
   const samples = buffer.getChannelData(0);
   for (let index = 0; index < samples.length; index += 1) {
-    const envelope = Math.exp(-index / (sampleRate * 0.007));
+    const envelope = Math.exp(-index / (sampleRate * 0.002));
     samples[index] = (Math.random() * 2 - 1) * envelope;
   }
   const click = audio.createBufferSource();
@@ -34,14 +46,14 @@ function playWoodenMoveSound(audio, now, side) {
   const clickVolume = audio.createGain();
   click.buffer = buffer;
   filter.type = 'bandpass';
-  filter.frequency.setValueAtTime(darkPiece ? 900 : 1250, now);
-  filter.Q.setValueAtTime(0.8, now);
+  filter.frequency.setValueAtTime(darkPiece ? 1450 : 1750, now);
+  filter.Q.setValueAtTime(0.65, now);
   clickVolume.gain.setValueAtTime(0.0001, now);
-  clickVolume.gain.exponentialRampToValueAtTime(0.16, now + 0.002);
-  clickVolume.gain.exponentialRampToValueAtTime(0.0001, now + 0.04);
+  clickVolume.gain.exponentialRampToValueAtTime(0.2, now + 0.0008);
+  clickVolume.gain.exponentialRampToValueAtTime(0.0001, now + 0.012);
   click.connect(filter).connect(clickVolume).connect(audio.destination);
   click.start(now);
-  click.stop(now + 0.04);
+  click.stop(now + 0.013);
 }
 
 export function playCheckSound(speech = globalThis.speechSynthesis, Utterance = globalThis.SpeechSynthesisUtterance) {

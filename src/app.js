@@ -3,7 +3,7 @@ import { chooseLocalMoveAsync, requestSuggestion } from './ai.js';
 import { loadSettings, recordRepository, saveSettings } from './storage.js';
 import { chineseNotation } from './notation.js';
 import { adjudicateRepetition } from './repetition.js';
-import { playCaptureSpeech, playCheckSound, playMoveSound, playTacticSpeech } from './audio.js?v=wood-move-1';
+import { playCaptureSpeech, playCheckSound, playMoveSound, playTacticSpeech } from './audio.js?v=wood-hammer-2';
 import { convertTextToRecord, extractText, findExistingImportedRecord, importXqfFolderFiles, MAX_IMPORT_SIZE, normalizeLegacyImportedRecord } from './importer.js';
 import { parseXqf, xqfMovesAsText } from './xqf.js';
 import { cblMovesAsText, parseCbl } from './cbl.js';
@@ -272,7 +272,7 @@ function renderBoard(svg, board, flipped, onSquare, selected = null, hints = [],
     if (!Number.isInteger(move.from) || !Number.isInteger(move.to)) continue;
     const from = mapSquare(move.from, flipped); const to = mapSquare(move.to, flipped);
     const start = point(from.file, from.rank); const end = point(to.file, to.rank);
-    const group = svgElement('g', { class: `analysis-arrow ${move.side} rank-${index + 1}`, 'aria-hidden': 'true', 'pointer-events': 'none' });
+    const group = svgElement('g', { class: `analysis-arrow ${move.side} rank-${index + 1}${move.lastMove ? ' last-move-arrow' : ''}`, 'aria-hidden': 'true', 'pointer-events': 'none' });
     group.append(svgElement('path', { d: `M ${start.x} ${start.y} L ${end.x} ${end.y}`, class: 'arrow-visible', 'marker-end': `url(#${prefix}-analysis-arrow-${move.side})` }));
     svg.append(group);
   }
@@ -775,7 +775,12 @@ function renderPlayBoard() {
   const last = state.history.at(-1)?.move ?? null;
   const status = gameStatus(state.board, state.side);
   const analysis = state.engineAnalyses[state.side];
-  const arrows = analysis?.status === '分析完成' && analysis.position === positionKey(state.board, state.side) ? engineCandidateMoves(analysis.lines, analysis.board, analysis.side ?? state.side).slice(0, 1).map(({ move, notation }) => ({ ...move, side: state.side, notation })) : [];
+  const analysisArrows = analysis?.status === '分析完成' && analysis.position === positionKey(state.board, state.side) ? engineCandidateMoves(analysis.lines, analysis.board, analysis.side ?? state.side).slice(0, 1).map(({ move, notation }) => ({ ...move, side: state.side, notation })) : [];
+  const lastEntry = state.history.at(-1);
+  const arrows = [
+    ...(lastEntry ? [{ ...lastEntry.move, side: lastEntry.previousSide, lastMove: true }] : []),
+    ...analysisArrows,
+  ];
   const hints = state.selectedSquare == null ? [] : legalMoves(state.board, state.side)
     .filter((move) => move.from === state.selectedSquare)
     .map((move) => {

@@ -59,6 +59,7 @@
 .analysis-arrow{pointer-events:none;--arrow-color:#f02b22;opacity:1}
 .analysis-arrow.black{--arrow-color:#3983b5}
 .analysis-arrow .arrow-visible{fill:none;stroke:var(--arrow-color);stroke-width:6;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 2px #fff) drop-shadow(0 1px 1px #3b2412);pointer-events:none}
+.last-move-arrow .arrow-visible{stroke-width:4.5;opacity:.94}
 
 /* Readability and touch improvements for the study workflow. */
 :root{--muted:#68736b;--line:#ddd6c8;--green:#245c45;--green-dark:#1c4936}
