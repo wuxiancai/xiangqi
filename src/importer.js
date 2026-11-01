@@ -8,6 +8,13 @@ const sourceBasename = (name = '') => name.split(/[\\/]/).at(-1);
 export function findExistingImportedRecord(records, sourceName, title) {
   return records.find((record) => record.userImported && sourceBasename(record.source?.name) === sourceBasename(sourceName) && record.title === title);
 }
+
+export function normalizeLegacyImportedRecord(record) {
+  if (!record?.initialPosition || typeof record.initialPosition.fen === "string" || !Array.isArray(record.initialPosition.board)) return record;
+  const fen = xqfMovesAsText({ board: record.initialPosition.board, moves: record.moves ?? [] }).split("\n", 1)[0];
+  parseFEN(fen);
+  return { ...record, initialPosition: { fen } };
+}
 const tokenPattern = /[a-i][0-9][a-i][0-9]|(?:[前中后](?:车|車|马|馬|炮|兵|卒|帅|帥|将|將|相|象|仕|士)(?:进|進|退|平)[一二三四五六七八九1-9])|(?:(?:车|車|马|馬|炮|兵|卒|帅|帥|将|將|相|象|仕|士)[一二三四五六七八九1-9](?:进|進|退|平)[一二三四五六七八九1-9])/g;
 
 const normalize = (value) => value.replaceAll('車', '车').replaceAll('馬', '马').replaceAll('帥', '帅').replaceAll('將', '将').replaceAll('進', '进');

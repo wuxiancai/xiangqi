@@ -343,3 +343,9 @@
 
 - Linux/macOS 部署端口探测 socket 在绑定前设置 `SO_REUSEADDR`，与 Python HTTPServer 的监听方式一致。Linux 上服务停止后仍处于 `TIME_WAIT` 的已关闭连接不再导致 8002 被误判占用并选到 8003；Windows 保持原探测语义，避免 `SO_REUSEADDR` 在 Windows 上造成活动端口误判。
 - 通过 Python 语法检查和 `git diff --check`；未在 Linux 云服务器上复现或验证真实 TIME_WAIT 场景。
+
+
+## 2026-11-01 跟进修复线上 importer 模块缺失导出
+
+- 用户反馈站点仍不可用；Chrome 硬刷新后仍复现 `app.js:7` 缺少 `normalizeLegacyImportedRecord` 导出错误。检查发现该导出此前只存在于工作区未提交的 `src/importer.js`，Git 版本及服务器版本都缺少它，因此部署或拉取已有提交无法解决。
+- 已将兼容旧导入棋谱局面的 `normalizeLegacyImportedRecord` 正式加入并提交到 `src/importer.js`；服务器仍需部署该提交中的 `src/importer.js`，确认响应导出此函数后重新加载页面。
