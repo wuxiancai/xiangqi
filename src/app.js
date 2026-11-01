@@ -964,12 +964,10 @@ function toggleAiVsAi() {
   state.aiVsAiRunning = !state.aiVsAiRunning;
   clearTimeout(state.aiMoveTimer); state.aiMoveTimer = null;
   if (state.aiVsAiRunning) {
-    $('#ai-output').textContent = state.pikafish?.ready ? '红黑双方由 Pikafish 自动对弈。' : '正在等待 Pikafish 引擎就绪…';
     if (state.pikafish?.ready) void scheduleAiMove();
     else if (!$('#pikafish-start').disabled) void startPikafish();
   } else {
     if (state.aiBusy) state.pikafish?.stop();
-    $('#ai-output').textContent = 'AI 对弈已暂停。';
   }
   renderPlayBoard();
 }
@@ -979,7 +977,6 @@ async function scheduleAiMove() {
   const aiVsAi = $('#mode-select').value === 'ai-vs-ai';
   if (aiVsAi && !state.aiVsAiRunning) return;
   if (aiVsAi && !state.pikafish?.ready) {
-    $('#ai-output').textContent = '正在等待 Pikafish 引擎就绪…';
     renderPlayBoard();
     if (!$('#pikafish-start').disabled) void startPikafish();
     return;
@@ -991,30 +988,23 @@ async function scheduleAiMove() {
     if (state.pikafish?.ready) {
       const uciMove = await requestPikafishAnalysis({ multiPv: 1 });
       if (/^[a-i][0-9][a-i][0-9]$/.test(uciMove)) { const iccs = engineMoveToICCS(uciMove); move = { from: fromICCS(iccs.slice(0, 2)), to: fromICCS(iccs.slice(2, 4)) }; }
-      $('#ai-output').textContent = 'Pikafish 引擎建议，着法已通过本地规则校验。';
     } else if (!aiVsAi) {
       const result = await requestSuggestion({ board: state.board, side: state.side, moves: legalMoves(state.board, state.side), settings: state.settings, strength: 'max', signal: controller.signal });
       move = result.move;
-      if (result.provider === 'external') $('#ai-output').textContent = `AI 分析：${result.explanation}（外部模型建议，棋力未认证）`;
-      else $('#ai-output').textContent = `AI 建议：${result.explanation}`;
     }
   } catch (error) {
     if (aiVsAi) {
       state.aiVsAiRunning = false;
-      $('#ai-output').textContent = `AI 对弈已停止：${error.message}`;
     } else
     if (state.settings.apiUrl && state.settings.apiKey && state.settings.model) {
       move = await chooseLocalMoveAsync(state.board, state.side, 'max');
-      $('#ai-output').textContent = `AI 服务暂不可用，已降级到本地基础策略：${error.name === 'AbortError' ? '请求超时' : error.message}`;
-    } else {
-      $('#ai-output').textContent = `本地 AI 搜索失败：${error.message}`;
     }
   } finally { clearTimeout(timeout); }
   state.aiBusy = false;
   if (aiVsAi && !state.aiVsAiRunning) { renderPlayBoard(); return; }
   if (move && legalMoves(state.board, state.side).some((candidate) => sameMove(candidate, move))) await playMove(move);
   else {
-    if (aiVsAi) { state.aiVsAiRunning = false; $('#ai-output').textContent = 'AI 对弈已停止：引擎未返回合法着法。'; }
+    if (aiVsAi) state.aiVsAiRunning = false;
     renderPlayBoard(); toast('AI 未能提供合法着法');
   }
 }
@@ -1195,7 +1185,6 @@ async function startPikafish({ automatic = false } = {}) {
     status.textContent = `加载失败：${error.message}`;
     if ($('#mode-select').value === 'ai-vs-ai' && state.aiVsAiRunning) {
       state.aiVsAiRunning = false;
-      $('#ai-output').textContent = `AI 对弈无法开始：${error.message}`;
       renderPlayBoard();
     } else if ($('#mode-select').value === 'ai' && state.side !== $('#side-select').value) {
       void scheduleAiMove();

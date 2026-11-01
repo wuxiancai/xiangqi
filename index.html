@@ -81,7 +81,6 @@
             <div class="board-header"><div><span class="live-dot"></span><span id="play-status">红方走棋</span><span id="red-evaluation" class="red-evaluation" aria-live="polite">红方 — · 胜率 — 和 — 负 —</span><span id="engine-strength" class="engine-strength" title="Pikafish 满强度表示引擎未启用限强；层数和线程数描述当前搜索配置，不是人类等级分。">AI 棋力：引擎未就绪。</span></div><button id="play-flip" class="text-button">翻转棋盘</button></div>
             <div class="board-frame"><svg id="play-board" class="chessboard" viewBox="0 0 500 550" role="grid" aria-label="对弈棋盘"></svg><div id="checkmate-overlay" class="checkmate-overlay" role="status" aria-live="assertive" hidden><div class="checkmate-burst" aria-hidden="true">✦</div><strong>绝杀</strong><span id="checkmate-winner">红方获胜</span></div></div>
             <div class="play-actions"><button id="undo-button" class="secondary-button">悔棋</button><button id="restart-button" class="secondary-button">重新开始</button><button id="ai-vs-ai-toggle" class="secondary-button" type="button" hidden>继续 AI 对弈</button></div>
-            <div id="ai-output" class="ai-output" aria-live="polite">AI 对弈状态会显示在这里。</div>
           </section>
           <aside class="game-sidebar">
             <section class="panel history-panel"><div class="panel-title"><div><h2>本局棋谱</h2><span id="turn-label" class="muted">轮到红方</span></div><button id="save-record-open" class="save-record-button" type="button">保存棋谱</button></div><div id="play-history" class="play-history"><span class="move-empty">棋局尚未开始</span></div></section>
