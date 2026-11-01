@@ -1,6 +1,8 @@
 """Install and start the web app using the native service manager."""
 
 import getpass
+import hashlib
+import json
 import os
 import platform
 import plistlib
@@ -16,6 +18,10 @@ ROOT = Path(__file__).resolve().parents[1]
 PORT = os.environ.get("PORT", "8000")
 SERVICE = "xiangqi"
 WINDOWS_TASK = "ChuheXiangqi"
+VERIFIED_ENGINE = {
+    "commit": "6a59ee2f7b105bff64d9efc2692591107787e2b1",
+    "net_sha256": "7d13d73569a9b571ba0eb20cf1596247bc2a42738967e61afef6482b231e900e",
+}
 
 
 def run(command, *, check=True):
@@ -45,6 +51,25 @@ def validate_port():
                 continue
             return candidate
     raise SystemExit(f"从端口 {port} 起没有可用端口。")
+
+
+def validate_engine_rescue():
+    dist = ROOT / "engine" / "pikafish" / "dist"
+    try:
+        version = json.loads((dist / "version.json").read_text(encoding="utf-8"))
+        if any(version.get(key) != value for key, value in VERIFIED_ENGINE.items()):
+            raise ValueError("本机引擎版本不是已验证兼容版本")
+        for filename in ("pikafish.js", "pikafish.wasm", "pikafish.nnue"):
+            path = dist / filename
+            if not path.is_file() or path.stat().st_size == 0:
+                raise ValueError(f"缺少 {filename}")
+        net_hash = hashlib.sha256((dist / "pikafish.nnue").read_bytes()).hexdigest()
+        if net_hash != VERIFIED_ENGINE["net_sha256"]:
+            raise ValueError("pikafish.nnue SHA-256 与已验证版本不符")
+        if (dist / "pikafish.wasm").read_bytes()[:4] != b"\0asm":
+            raise ValueError("pikafish.wasm 文件头无效")
+    except (OSError, ValueError, json.JSONDecodeError) as error:
+        raise SystemExit(f"部署已停止：本机 Pikafish 救援资源缺失或校验失败（{error}）。请获取包含 engine/pikafish/dist 已验证资源的项目版本后重试。") from error
 
 
 def deploy_linux():
@@ -113,6 +138,7 @@ def deploy_windows():
 
 def main():
     global PORT
+    validate_engine_rescue()
     PORT = str(validate_port())
     system = platform.system()
     if system == "Linux":
