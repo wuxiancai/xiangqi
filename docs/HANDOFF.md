@@ -356,3 +356,9 @@
 - 线上更新清单的 Pikafish commit `4c17cee11f888ae1d48a9494f2e2239f019f0a1f` 与 NNUE `810ef8ec...` 已列为不兼容；manifest 的 fallback 仍是相同 commit/net，因此两者均被安全跳过。
 - 线上 `/engine/pikafish/dist/version.json`、`pikafish.js`、`pikafish.wasm`、`pikafish.nnue` 均返回 404，导致无法使用本机兼容回退。仓库 `.gitignore` 忽略 `dist/`，常规 Git 部署不会传这些文件。
 - 本机已验证资源版本 `Pikafish-2026-09-19-compatible`，commit `6a59ee2f7b105bff64d9efc2692591107787e2b1`，NNUE SHA-256 `7d13d73569a9b571ba0eb20cf1596247bc2a42738967e61afef6482b231e900e`。将上述四个文件部署到服务器项目的 `engine/pikafish/dist/` 后，重新加载即可触发本机回退；验证四个 URL 返回 200。
+
+
+## 2026-11-01 部署 Pikafish 初始化超时修复
+
+- 服务器已安装经过 SHA-256 验证的兼容 Pikafish 资源，并部署初始化超时按进度续期的前端模块；Service Worker 缓存升至 v105。线上重新加载后 NNUE 下载完成，原初始化超时提示消失。
+- 已完成 Node 语法检查与 `git diff --check`；浏览器未能进一步确认面板分析输出。
