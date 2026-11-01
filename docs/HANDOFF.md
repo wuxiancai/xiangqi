@@ -349,3 +349,10 @@
 
 - 用户反馈站点仍不可用；Chrome 硬刷新后仍复现 `app.js:7` 缺少 `normalizeLegacyImportedRecord` 导出错误。检查发现该导出此前只存在于工作区未提交的 `src/importer.js`，Git 版本及服务器版本都缺少它，因此部署或拉取已有提交无法解决。
 - 已将兼容旧导入棋谱局面的 `normalizeLegacyImportedRecord` 正式加入并提交到 `src/importer.js`；服务器仍需部署该提交中的 `src/importer.js`，确认响应导出此函数后重新加载页面。
+
+
+## 2026-11-01 诊断 Pikafish 兼容引擎回退资源缺失
+
+- 线上更新清单的 Pikafish commit `4c17cee11f888ae1d48a9494f2e2239f019f0a1f` 与 NNUE `810ef8ec...` 已列为不兼容；manifest 的 fallback 仍是相同 commit/net，因此两者均被安全跳过。
+- 线上 `/engine/pikafish/dist/version.json`、`pikafish.js`、`pikafish.wasm`、`pikafish.nnue` 均返回 404，导致无法使用本机兼容回退。仓库 `.gitignore` 忽略 `dist/`，常规 Git 部署不会传这些文件。
+- 本机已验证资源版本 `Pikafish-2026-09-19-compatible`，commit `6a59ee2f7b105bff64d9efc2692591107787e2b1`，NNUE SHA-256 `7d13d73569a9b571ba0eb20cf1596247bc2a42738967e61afef6482b231e900e`。将上述四个文件部署到服务器项目的 `engine/pikafish/dist/` 后，重新加载即可触发本机回退；验证四个 URL 返回 200。
