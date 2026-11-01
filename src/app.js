@@ -7,7 +7,7 @@ import { playCaptureSpeech, playCheckSound, playMoveSound, playTacticSpeech } fr
 import { convertTextToRecord, extractText, findExistingImportedRecord, importXqfFolderFiles, MAX_IMPORT_SIZE, normalizeLegacyImportedRecord } from './importer.js';
 import { parseXqf, xqfMovesAsText } from './xqf.js';
 import { cblMovesAsText, parseCbl } from './cbl.js';
-import { engineMoveToICCS, formatRedEvaluation, getPikafishResourceConfig, PikafishEngine } from '../engine/pikafish/engine.js?v=verified-local-rescue-1';
+import { engineMoveToICCS, formatRedEvaluation, getPikafishResourceConfig, PikafishEngine } from '../engine/pikafish/engine.js?v=local-first-startup-1';
 import { checkMobileAppUpdate } from './mobile-updater.js?v=1';
 import { setupPwaInstall } from './pwa.js?v=1';
 
@@ -1175,6 +1175,8 @@ async function startPikafish({ automatic = false } = {}) {
     renderPlayBoard();
     if ($('#mode-select').value === 'ai-vs-ai') {
       if (state.aiVsAiRunning) void scheduleAiMove();
+    } else if ($('#mode-select').value === 'ai' && state.side !== $('#side-select').value) {
+      void scheduleAiMove();
     } else void requestPikafishAnalysis();
   } catch (error) {
     finishEngineDownloadNotice(error);
@@ -1184,6 +1186,8 @@ async function startPikafish({ automatic = false } = {}) {
       state.aiVsAiRunning = false;
       $('#ai-output').textContent = `AI 对弈无法开始：${error.message}`;
       renderPlayBoard();
+    } else if ($('#mode-select').value === 'ai' && state.side !== $('#side-select').value) {
+      void scheduleAiMove();
     }
     if (!automatic) toast('Pikafish 加载失败，请查看引擎状态中的具体原因');
   }
@@ -1285,13 +1289,15 @@ async function initialize() {
       $('#mode-select').value = savedGame.mode ?? 'ai'; $('#side-select').value = savedGame.userSide ?? 'red';
     }
   } catch { $('#storage-status').textContent = '本地存储不可用'; }
-  await refreshRecords();
   renderStudyBoard(); renderPlayBoard();
-  if ($('#mode-select').value === 'ai' && $('#side-select').value === 'black' && state.side === RED && !state.history.length) scheduleAiMove();
+  // Start the engine before loading the large self-hosted game collection.
+  // Fresh clones can contain tens of thousands of records, so catalogue I/O
+  // must not hold engine initialization behind one huge API response.
+  void startPikafish({ automatic: true });
+  void refreshRecords();
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
     navigator.serviceWorker.register('./service-worker.js', { updateViaCache: 'none' }).catch(() => {});
   }
-  void startPikafish({ automatic: true });
   void checkMobileAppUpdate();
 }
 

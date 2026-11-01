@@ -80,6 +80,7 @@ const asset = (name, version = '') => {
   return url.href;
 };
 const UPDATE_FEED = 'https://raw.githubusercontent.com/wuxiancai/xiangqi/engine-updates/manifest.json';
+const UPDATE_FEED_TIMEOUT_MS = 8000;
 const INCOMPATIBLE_ENGINE_NET_PAIRS = new Set([
   '4c17cee11f888ae1d48a9494f2e2239f019f0a1f:810ef8ecb0d0697755deac0a1d956296d762132f63b74fc4f8658f2ec5203f5b',
 ]);
@@ -106,7 +107,14 @@ async function loadEngineAssets(onUpdate = () => {}) {
   let latest = null;
   let latestError = null;
   try {
-    const response = await fetch(UPDATE_FEED, { cache: 'no-store' });
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), UPDATE_FEED_TIMEOUT_MS);
+    let response;
+    try {
+      response = await fetch(UPDATE_FEED, { cache: 'no-store', signal: controller.signal });
+    } finally {
+      clearTimeout(timer);
+    }
     if (!response.ok) throw new Error(`版本清单 HTTP ${response.status}`);
     latest = await response.json();
     if (latest.schema !== 'chuhe-pikafish/v1' || latest.engine_api !== 1 || !latest.base_url || !latest.assets) {
