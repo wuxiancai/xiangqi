@@ -18,7 +18,7 @@
 ## 棋谱格式决策
 
 - **默认内部及持久化格式：版本化 JSON（`xiangqi-study/v1`）**。标准 PGN 面向国际象棋，不作为中国象棋原生默认格式；自定义 JSON 能直接表达中文棋子/坐标、结果、来源授权、变例和逐着注释。
-- 每盘结构至少包含 `schema`、`id`、`title`、`category[]`、`players`、`result`、`source`（含 `rights`）、`initialPosition`（标准开局或含 side-to-move 的中国象棋 FEN）、`moves[]`（ICCS 起止坐标）、`annotations`（ply 到短说明）、`tags[]`。坐标定义固定为红方视角文件 a–i、横线 0–9；版本升级须保留迁移器。应用内部使用结构化着法，不以 SAN/中文记谱字符串作为规则输入。
+- 每盘结构至少包含 `schema`、`id`、`title`、`category[]`、`players`、`result`、`source`（含 `rights`）、`initialPosition`（标准开局或含 side-to-move 的中国象棋 FEN）、`moves[]`（ICCS 起止坐标）、`annotations`（ply 到短说明）、`tags[]`；可选 `folder` 保存用户在应用棋谱库中创建的棋谱夹名称。坐标定义固定为红方视角文件 a–i、横线 0–9；版本升级须保留迁移器。应用内部使用结构化着法，不以 SAN/中文记谱字符串作为规则输入。
 - **导入范围**：内部及持久化格式仍是 `xiangqi-study/v1` JSON；另通过可编辑文本转换器导入 XQF 主线、CCBridge CBL 主线（单库多盘）、TXT/MD、常见 PGN/ICCS/FEN 文本、DOCX、PDF 和常见图片。XQF/CBL 支持单文件和目录/子目录批量导入，在本机解码并逐着匹配合法着法；CBL 变着暂不导入。OCR/文档解析后同样校验，错误时不部分导入。每文件最大 500 MiB；未列出的专有格式、旧版 DOC、加密文档、从棋盘局面截图直接识谱不保证支持。浏览器按需从 CDN 下载 PDF/DOCX/OCR 引擎，文件本身不上传。
 - **残局局面**：v1 支持标准初始局面及中国象棋 FEN 自定义初始局面，包含 side-to-move 字段；这是残局教学棋谱的必要能力。转换器必须校验 FEN 行数、每横线 9 格及双方将帅。
 - **切换条件**：JSON 仍作规范内部模型；XQF 已支持主线导入，后续仅在变着树需求明确且解析可靠时扩展。PGN 仅在目标中国象棋工具链形成稳定约定后增加转换适配。迁移不得改变规则层接口。
@@ -82,4 +82,4 @@
 
 ## Pikafish 浏览器引擎补充
 
-对弈工作台默认自动加载 Pikafish WebAssembly 引擎用于 AI 应手；本地规则仍负责校验并执行实际走法。最强档默认搜索 30 层、MultiPV 1、按设备 CPU 数配置最多 8 个线程并使用 256 MiB Hash；多候选局面分析可提高 MultiPV，但会降低搜索速度。引擎及 NNUE 网络不随仓库分发，用户可按 `engine/pikafish/README.md` 在本机构建。Pikafish 源码为 GPL-3.0-or-later，NNUE 权重另有非商业限制；强度等级须经独立基准后才可标定。多线程 WASM 需要 COOP/COEP 隔离响应头。
+对弈工作台默认自动加载 Pikafish WebAssembly 引擎用于 AI 应手；本地规则仍负责校验并执行实际走法。默认搜索深度为 16 层中速，另可选 12 层快速、20 层标准或 30 层最强档，也可按每步 3、5、7、10、30 秒限时搜索；限时模式在预算内持续迭代，时间到后返回当前最佳着法，实际深度随设备和局面变化，可能超过 30 层。MultiPV 默认 1、按浏览器报告的 CPU 并发数配置最多 32 个线程；Hash 按 `navigator.deviceMemory` 自动估算；旧版 1 GiB WASM 上限固定最多 256 MiB，新版 `adaptive-resources-2gb-v1` 构建为 64–1280 MiB。缺少内存信息时按 2 GiB 估算。Emscripten 线程池按设备并发数预热，新版 WASM 最大内存为 2 GiB；引擎运行时为浏览器、NNUE 和线程栈预留内存。多候选局面分析可提高 MultiPV，但会降低搜索速度。引擎及 NNUE 网络不随仓库分发，用户可按 `engine/pikafish/README.md` 在本机构建。Pikafish 源码为 GPL-3.0-or-later，NNUE 权重另有非商业限制；强度等级须经独立基准后才可标定。多线程 WASM 需要 COOP/COEP 隔离响应头。

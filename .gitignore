@@ -10,10 +10,9 @@ engine/pikafish/.dist-previous-*/
 __pycache__/
 *.py[cod]
 .runtime/
-
-!engine/pikafish/dist/
-engine/pikafish/dist/*
-!engine/pikafish/dist/version.json
-!engine/pikafish/dist/pikafish.js
-!engine/pikafish/dist/pikafish.wasm
-!engine/pikafish/dist/pikafish.nnue
+*.pem
+*.key
+*.crt
+*.cer
+*.p12
+*.pfx

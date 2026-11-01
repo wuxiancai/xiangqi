@@ -10,8 +10,8 @@ export function findExistingImportedRecord(records, sourceName, title) {
 }
 
 export function normalizeLegacyImportedRecord(record) {
-  if (!record?.initialPosition || typeof record.initialPosition.fen === "string" || !Array.isArray(record.initialPosition.board)) return record;
-  const fen = xqfMovesAsText({ board: record.initialPosition.board, moves: record.moves ?? [] }).split("\n", 1)[0];
+  if (!record?.initialPosition || typeof record.initialPosition.fen === 'string' || !Array.isArray(record.initialPosition.board)) return record;
+  const fen = xqfMovesAsText({ board: record.initialPosition.board, moves: record.moves ?? [] }).split('\n', 1)[0];
   parseFEN(fen);
   return { ...record, initialPosition: { fen } };
 }
@@ -51,7 +51,7 @@ export async function importXqfFolderFiles(files, existingRecords = [], onProgre
   const addParsed = (parsed, sourceName, movesText) => {
     const existing = findExistingImportedRecord(existingRecords, sourceName, parsed.title);
     const record = convertTextToRecord(movesText, { title: parsed.title, sourceName });
-    records.push({ ...record, id: existing?.id ?? record.id, players: parsed.players, result: parsed.result, initialPosition: parsed.initialPosition ?? record.initialPosition, source: { ...record.source, name: sourceName }, userImported: true });
+    records.push({ ...record, id: existing?.id ?? record.id, players: parsed.players, result: parsed.result, source: { ...record.source, name: sourceName }, userImported: true });
     if (existing) overwritten += 1;
   };
   for (let index = 0; index < candidates.length; index += 1) {

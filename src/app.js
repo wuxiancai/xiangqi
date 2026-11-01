@@ -7,7 +7,7 @@ import { playCaptureSpeech, playCheckSound, playMoveSound, playTacticSpeech } fr
 import { convertTextToRecord, extractText, findExistingImportedRecord, importXqfFolderFiles, MAX_IMPORT_SIZE, normalizeLegacyImportedRecord } from './importer.js';
 import { parseXqf, xqfMovesAsText } from './xqf.js';
 import { cblMovesAsText, parseCbl } from './cbl.js';
-import { engineMoveToICCS, formatRedEvaluation, PikafishEngine } from '../engine/pikafish/engine.js?v=verified-local-rescue-1';
+import { engineMoveToICCS, formatRedEvaluation, getPikafishResourceConfig, PikafishEngine } from '../engine/pikafish/engine.js?v=verified-local-rescue-1';
 import { checkMobileAppUpdate } from './mobile-updater.js?v=1';
 import { setupPwaInstall } from './pwa.js?v=1';
 
@@ -314,12 +314,64 @@ function renderMoveList() {
   }
 }
 
+function sourceDirectoryParts(record) {
+  const parts = (record.source?.name ?? '').replaceAll('\\', '/').split('/').filter(Boolean);
+  if (parts.length < 2) return [];
+  parts.pop();
+  if (parts[0] === '中国象棋棋谱大全') parts.shift();
+  return parts;
+}
+
+function categoryLabels(record) {
+  const topDirectory = sourceDirectoryParts(record)[0];
+  const sourceCategory = Object.entries(sourceCategoryRoots)
+    .find(([, roots]) => roots.includes(topDirectory))?.[0];
+  return sourceCategory ? [sourceCategory] : (record.category ?? []);
+}
+
+function recordMatchesCategory(record, category) {
+  if (!category) return true;
+  const directories = sourceDirectoryParts(record);
+  const top = directories[0];
+  if (top && Object.values(sourceCategoryRoots).flat().includes(top)) {
+    return (sourceCategoryRoots[category] ?? []).includes(top);
+  }
+  return (record.category ?? []).includes(category);
+}
+
 function filteredRecords() {
-  return state.records.filter((record) => !state.selectedCategory || record.category.includes(state.selectedCategory));
+  return state.records.filter((record) => {
+    if (!recordMatchesCategory(record, state.selectedCategory)) return false;
+    if (!state.selectedSourcePath.length) return true;
+    const directories = sourceDirectoryParts(record);
+    return state.selectedSourcePath.every((part, index) => directories[index] === part);
+  });
+}
+
+function sourceFilterOptions() {
+  const roots = sourceCategoryRoots[state.selectedCategory];
+  const currentPath = state.selectedSourcePath;
+  const depth = currentPath.length || (roots ? 1 : 0);
+  const counts = new Map();
+  for (const record of state.records) {
+    if (!recordMatchesCategory(record, state.selectedCategory)) continue;
+    const directories = sourceDirectoryParts(record);
+    if (roots && !currentPath.length && !roots.includes(directories[0])) continue;
+    if (currentPath.some((part, index) => directories[index] !== part)) continue;
+    const name = directories[depth];
+    if (!name) continue;
+    const path = currentPath.length ? [...currentPath, name] : roots ? [directories[0], name] : [name];
+    const key = `${path.join('/')}`;
+    const entry = counts.get(key) ?? { name, path, count: 0 };
+    entry.count += 1;
+    counts.set(key, entry);
+  }
+  return [...counts.values()].sort((left, right) => right.count - left.count || left.name.localeCompare(right.name, 'zh-CN'));
 }
 
 function recordGroup(record) {
   if (!record.userImported || !record.source?.name) return null;
+  if (record.folder) return { key: `collection:${record.folder.toLocaleLowerCase()}`, name: record.folder, collection: true };
   const sourceName = record.source.name.replaceAll('\\', '/');
   const basename = sourceName.split('/').at(-1);
   const extension = basename.match(/\.([^.]+)$/)?.[1]?.toLocaleLowerCase();
@@ -342,12 +394,12 @@ function libraryEntries() {
     entry.records.push(record);
     groups.set(group.key, entry);
   }
-  const recordMatches = (record) => !query || `${record.title} ${record.players?.red ?? ''} ${record.players?.black ?? ''} ${(record.tags ?? []).join(' ')}`.toLocaleLowerCase().includes(query);
+  const recordMatches = (record) => !query || `${record.title} ${record.players?.red ?? ''} ${record.players?.black ?? ''} ${(record.tags ?? []).join(' ')} ${record.source?.name ?? ''}`.toLocaleLowerCase().includes(query);
   const groupedIds = new Set();
   const entries = [];
   for (const group of groups.values()) {
     const groupMatches = !query || group.name.toLocaleLowerCase().includes(query);
-    if (group.records.length < 2 || (!groupMatches && !group.records.some(recordMatches))) continue;
+    if ((!group.collection && group.records.length < 2) || (!groupMatches && !group.records.some(recordMatches))) continue;
     const records = groupMatches ? group.records : group.records.filter(recordMatches);
     if (records.length < 2 && !groupMatches) continue;
     records.forEach((record) => groupedIds.add(record.id));
@@ -361,12 +413,31 @@ function libraryEntries() {
 }
 
 function renderLibrary() {
-  $('#library-count').textContent = `${state.records.length} 盘`;
+  const scopeRecords = filteredRecords();
+  $('#library-count').textContent = scopeRecords.length === state.records.length ? `${state.records.length} 盘` : `${scopeRecords.length} / ${state.records.length} 盘`;
   const filters = $('#category-filters'); filters.replaceChildren();
-  for (const category of ['', ...categories]) {
-    const button = document.createElement('button'); button.className = `filter-chip${state.selectedCategory === category ? ' active' : ''}`; button.textContent = category || '全部';
-    button.onclick = () => { state.selectedCategory = category; renderLibrary(); };
-    filters.append(button);
+  const addCaption = (text) => { const caption = document.createElement('span'); caption.className = 'filter-caption'; caption.textContent = text; filters.append(caption); };
+  const addFilter = ({ label, count, active = false, title = label, onClick }) => {
+    const button = document.createElement('button'); button.className = `filter-chip${active ? ' active' : ''}`; button.type = 'button'; button.title = title;
+    const name = document.createElement('span'); name.className = 'filter-name'; name.textContent = label; button.append(name);
+    const badge = document.createElement('span'); badge.className = 'filter-count'; badge.textContent = count.toLocaleString('zh-CN'); button.append(badge);
+    button.onclick = onClick; filters.append(button);
+  };
+  addCaption('棋谱类型');
+  addFilter({ label: '全部', count: state.records.length, active: !state.selectedCategory, onClick: () => { state.selectedCategory = ''; state.selectedSourcePath = []; renderLibrary(); } });
+  for (const category of categories) {
+    const count = state.records.filter((record) => recordMatchesCategory(record, category)).length;
+    addFilter({ label: category, count, active: state.selectedCategory === category, onClick: () => { state.selectedCategory = category; state.selectedSourcePath = []; renderLibrary(); } });
+  }
+  const sourceOptions = sourceFilterOptions();
+  if (sourceOptions.length || state.selectedSourcePath.length) {
+    addCaption(state.selectedSourcePath.length ? `来源目录 · ${state.selectedSourcePath.join(' / ')}` : '来源目录');
+    if (state.selectedSourcePath.length) {
+      addFilter({ label: '上一级', count: '', active: false, title: '返回上一级目录', onClick: () => { state.selectedSourcePath = state.selectedSourcePath.slice(0, -1); renderLibrary(); } });
+    }
+    for (const option of sourceOptions) {
+      addFilter({ label: option.name, count: option.count, active: false, title: `${option.path.join(' / ')} · ${option.count.toLocaleString('zh-CN')} 盘`, onClick: () => { state.selectedSourcePath = option.path; renderLibrary(); } });
+    }
   }
   const list = $('#game-list'); list.replaceChildren();
   const entries = libraryEntries();
@@ -375,7 +446,7 @@ function renderLibrary() {
     const card = document.createElement('div'); card.className = `game-card${state.currentRecord?.id === record.id ? ' active' : ''}`;
     const select = document.createElement('button'); select.className = 'game-select';
     const title = document.createElement('strong'); title.textContent = record.title;
-    const detail = document.createElement('span'); detail.textContent = `${record.category.join(' · ')}　${record.players?.red ?? '红方'} / ${record.players?.black ?? '黑方'}`;
+    const detail = document.createElement('span'); detail.textContent = `${categoryLabels(record).join(' · ')}　${record.players?.red ?? '红方'} / ${record.players?.black ?? '黑方'}`;
     select.append(title, detail); select.onclick = () => loadRecord(record); card.append(select);
     if (record.userImported) {
       const remove = document.createElement('button'); remove.className = 'delete-record'; remove.type = 'button'; remove.textContent = '删除';
@@ -438,7 +509,9 @@ function stepStudy(delta) {
     const move = state.currentRecord.moves[nextPly - 1];
     const initialSide = state.currentRecord.initialSide ?? RED;
     const moveSide = nextPly % 2 === 1 ? initialSide : otherSide(initialSide);
-    playMoveSound(moveAudio, Boolean(state.currentRecord.positions[state.studyPly][move.to]), moveSide);
+    const captured = Boolean(state.currentRecord.positions[state.studyPly][move.to]);
+    playMoveSound(moveAudio, captured, moveSide);
+    if (captured) playCaptureSpeech();
     const nextSide = otherSide(moveSide);
     if (isInCheck(state.currentRecord.positions[nextPly], nextSide)) playCheckSound();
   }
@@ -458,7 +531,10 @@ function togglePlayback() {
 
 async function refreshRecords() {
   try {
-    const imported = await recordRepository.all();
+    const storedRecords = await recordRepository.all();
+    const imported = storedRecords.map(normalizeLegacyImportedRecord);
+    const repaired = imported.filter((record, index) => record !== storedRecords[index]);
+    if (repaired.length) await recordRepository.putMany(repaired);
     const importedRecords = imported.map((record) => {
       const { positions, ...stored } = record;
       return stored;
@@ -632,6 +708,69 @@ function saveGame() {
   recordRepository.putState('active-game', payload).catch(() => {});
 }
 
+function openSaveRecordDialog() {
+  const select = $('#save-record-folder');
+  const existingFolders = [...new Map(state.records.map((record) => recordGroup(record)?.name).filter(Boolean).map((name) => [name.toLocaleLowerCase(), name])).values()];
+  select.replaceChildren();
+  for (const name of existingFolders) select.add(new Option(name, `existing:${name}`));
+  select.add(new Option('新建文件夹…', 'new'));
+  select.value = existingFolders.length ? `existing:${existingFolders[0]}` : 'new';
+  $('#save-record-new-folder-wrap').hidden = select.value !== 'new';
+  $('#save-record-status').textContent = '棋谱夹是应用棋谱库中的分类。选择已有文件夹，或新建一个文件夹名称。';
+  const now = new Date();
+  $('#save-record-title').value = `对局 ${now.toLocaleDateString('zh-CN')} ${now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}`;
+  $('#save-record-dialog').showModal();
+}
+
+function createCurrentGameRecord(title, folder) {
+  const mode = $('#mode-select').value;
+  const userSide = $('#side-select').value;
+  const players = mode === 'ai'
+    ? { red: userSide === 'red' ? '用户' : 'AI', black: userSide === 'black' ? '用户' : 'AI' }
+    : mode === 'ai-vs-ai' ? { red: 'Pikafish', black: 'Pikafish' } : { red: '红方', black: '黑方' };
+  const outcome = state.adjudication ?? gameStatus(state.board, state.side);
+  const result = state.gameOver
+    ? (outcome.winner === RED ? '红胜' : outcome.winner === BLACK ? '黑胜' : '和棋')
+    : '未完';
+  return {
+    schema: 'xiangqi-study/v1',
+    id: globalThis.crypto?.randomUUID?.() ?? `game-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    title,
+    category: ['现代对局'],
+    players,
+    result,
+    source: { name: '本机对弈', rights: '用户本机记录' },
+    folder,
+    initialPosition: 'standard',
+    moves: state.history.map(({ move }) => ({ from: toICCS(move.from), to: toICCS(move.to) })),
+    annotations: {},
+    tags: ['本地对弈'],
+    userImported: true,
+  };
+}
+
+async function saveCurrentGameRecord() {
+  const titleInput = $('#save-record-title');
+  const title = titleInput.value.trim();
+  if (!title) { toast('请输入棋谱名称'); titleInput.focus(); return; }
+  const folderSelect = $('#save-record-folder');
+  const folderInput = $('#save-record-new-folder');
+  const folder = folderSelect.value === 'new' ? folderInput.value.trim() : folderSelect.value.slice('existing:'.length);
+  if (!folder) {
+    toast('请输入新文件夹名称'); folderInput.focus();
+    return;
+  }
+  const record = createCurrentGameRecord(title, folder);
+  try {
+    await recordRepository.put(record);
+    $('#save-record-dialog').close();
+    await refreshRecords();
+    toast(`棋谱已保存到“${folder}”`);
+  } catch (error) {
+    toast(`保存棋谱失败：${error.message}`);
+  }
+}
+
 function renderPlayBoard() {
   const last = state.history.at(-1)?.move ?? null;
   const status = gameStatus(state.board, state.side);
@@ -657,15 +796,43 @@ function renderPlayBoard() {
     ? currentAnalysis.lines.find((line) => line.multipv === 1) ?? null
     : null;
   $('#red-evaluation').textContent = formatRedEvaluation(currentLine, currentAnalysis?.side ?? state.side);
+  const strength = $('#engine-strength');
+  const configuredSearch = getPikafishSearchConfig($('#pikafish-depth')?.value ?? '16');
+  const { threads: configuredThreads, hashMb: configuredHash } = getPikafishResourceConfig(globalThis.navigator, state.pikafish?.version?.build_profile);
+  if (strength) {
+    strength.textContent = state.pikafish?.ready
+      ? `AI 棋力：Pikafish 满强度 · ${configuredSearch.label} · ${configuredThreads}线程`
+      : 'AI 棋力：Pikafish 未就绪';
+    strength.title = `当前引擎配置：${configuredSearch.description}、${configuredThreads} 个 CPU 线程、${configuredHash} MiB 哈希（根据浏览器报告的内存自动配置），单主线。Pikafish 满强度表示未启用引擎限强；官方没有将该配置换算为人类等级分。实际棋力会受设备性能、用时和局面影响。`;
+  }
   $('#undo-button').disabled = !state.history.length || state.aiBusy;
   $('#restart-button').disabled = state.aiBusy;
   $('#mode-select').disabled = state.aiBusy;
   $('#side-select').disabled = state.aiBusy;
+  const aiVsAi = $('#mode-select').value === 'ai-vs-ai';
+  $('#side-select').closest('.engine-game-option').hidden = aiVsAi;
+  $('#pikafish-depth').disabled = state.aiBusy;
+  const aiVsAiToggle = $('#ai-vs-ai-toggle');
+  aiVsAiToggle.hidden = !aiVsAi;
+  aiVsAiToggle.disabled = state.gameOver;
+  aiVsAiToggle.textContent = state.gameOver ? 'AI 对局已结束' : state.aiVsAiRunning ? '暂停 AI 对弈' : '继续 AI 对弈';
+  aiVsAiToggle.setAttribute('aria-pressed', String(state.aiVsAiRunning));
   renderHistory();
   renderEngineLines();
 }
 
 function positionKey(board, side) { return `${board.join('')}:${side}`; }
+
+function consecutiveNoCaptureMoves(history) {
+  let count = 0;
+  for (let index = history.length - 1; index >= 0; index -= 1) {
+    const entry = history[index];
+    const captured = entry.captured ?? entry.previousBoard?.[entry.move?.to];
+    if (captured) break;
+    count += 1;
+  }
+  return count;
+}
 
 function engineCandidateMoves(lines, board, side) {
   const legal = legalMoves(board, side);
@@ -695,6 +862,7 @@ function renderHistory() {
 async function onPlaySquare(square) {
   if (state.gameOver) return;
   const mode = $('#mode-select').value; const userSide = $('#side-select').value;
+  if (mode === 'ai-vs-ai') return;
   if (mode === 'ai' && state.side !== userSide) return;
   if (state.selectedSquare != null) {
     const move = legalMoves(state.board, state.side).find((candidate) => candidate.from === state.selectedSquare && candidate.to === square);
@@ -706,8 +874,8 @@ async function onPlaySquare(square) {
 }
 
 async function playMove(move) {
-  const captured = state.board[move.to];
   const mover = state.side;
+  const captured = state.board[move.to];
   playMoveSound(moveAudio, Boolean(captured), state.side);
   if (captured) playCaptureSpeech();
   const previousBoard = state.board;
@@ -730,7 +898,7 @@ async function playMove(move) {
   } else if (tacticalTargets.length >= 3) playTacticSpeech('捉三');
   else if (tacticalTargets.length >= 2) playTacticSpeech('捉双');
   const initialPosition = state.history[0];
-  const trace = [{ key: `${initialPosition.previousBoard.join('')}:${initialPosition.previousSide}` }];
+  const trace = [{ key: positionKey(initialPosition.previousBoard, initialPosition.previousSide) }];
   let traceBoard = [...initialPosition.previousBoard];
   let pieceIds = traceBoard.map((piece, square) => piece ? square : null);
   for (const entry of state.history) {
@@ -740,7 +908,14 @@ async function playMove(move) {
     nextIds[to] = pieceIds[from];
     nextIds[from] = null;
     const nextSide = otherSide(entry.previousSide);
-    trace.push({ key: `${nextBoard.join('')}:${nextSide}`, mover: entry.previousSide, moveKey: `${from}-${to}`, gaveCheck: isInCheck(nextBoard, nextSide), board: nextBoard, ids: nextIds });
+    trace.push({
+      key: positionKey(nextBoard, nextSide),
+      mover: entry.previousSide,
+      moveKey: `${from}-${to}`,
+      gaveCheck: isInCheck(nextBoard, nextSide),
+      board: nextBoard,
+      ids: nextIds,
+    });
     traceBoard = nextBoard;
     pieceIds = nextIds;
   }
@@ -758,18 +933,52 @@ async function playMove(move) {
   if (!state.gameOver && quietMoveCount === 110) toast('连续未吃子已达110步，再走10步将按自然限着判和。');
   renderPlayBoard(); saveGame();
   if (state.gameOver) {
-    const outcome = state.adjudication ?? status;
+    state.aiVsAiRunning = false; clearTimeout(state.aiMoveTimer);
+    const winner = state.adjudication?.winner ?? status.winner;
     const reason = state.adjudication?.reason ?? status.reason;
-    toast(outcome.winner ? `${names[outcome.winner]}胜：${reason}` : `和棋：${reason}`);
-    return;
+    if (winner) showCheckmateAnimation(winner);
+    toast(winner ? `${names[winner]}胜：${reason}` : `和棋：${reason}`);
+    renderPlayBoard(); return;
   }
   const mode = $('#mode-select').value; const userSide = $('#side-select').value;
-  if (mode === 'ai' && state.side !== userSide) await scheduleAiMove();
+  if (mode === 'ai-vs-ai' && state.aiVsAiRunning) queueAiMove();
+  else if (mode === 'ai' && state.side !== userSide) await scheduleAiMove();
   else if (state.pikafish?.ready) void requestPikafishAnalysis();
+}
+
+function queueAiMove() {
+  clearTimeout(state.aiMoveTimer);
+  state.aiMoveTimer = setTimeout(() => {
+    state.aiMoveTimer = null;
+    if ($('#mode-select').value === 'ai-vs-ai' && state.aiVsAiRunning && !state.gameOver) void scheduleAiMove();
+  }, 250);
+}
+
+function toggleAiVsAi() {
+  if ($('#mode-select').value !== 'ai-vs-ai' || state.gameOver) return;
+  state.aiVsAiRunning = !state.aiVsAiRunning;
+  clearTimeout(state.aiMoveTimer); state.aiMoveTimer = null;
+  if (state.aiVsAiRunning) {
+    $('#ai-output').textContent = state.pikafish?.ready ? '红黑双方由 Pikafish 自动对弈。' : '正在等待 Pikafish 引擎就绪…';
+    if (state.pikafish?.ready) void scheduleAiMove();
+    else if (!$('#pikafish-start').disabled) void startPikafish();
+  } else {
+    if (state.aiBusy) state.pikafish?.stop();
+    $('#ai-output').textContent = 'AI 对弈已暂停。';
+  }
+  renderPlayBoard();
 }
 
 async function scheduleAiMove() {
   if (state.aiBusy || state.gameOver) return;
+  const aiVsAi = $('#mode-select').value === 'ai-vs-ai';
+  if (aiVsAi && !state.aiVsAiRunning) return;
+  if (aiVsAi && !state.pikafish?.ready) {
+    $('#ai-output').textContent = '正在等待 Pikafish 引擎就绪…';
+    renderPlayBoard();
+    if (!$('#pikafish-start').disabled) void startPikafish();
+    return;
+  }
   state.aiBusy = true; renderPlayBoard();
   const controller = new AbortController(); const timeout = setTimeout(() => controller.abort(), 20000);
   let move;
@@ -778,13 +987,17 @@ async function scheduleAiMove() {
       const uciMove = await requestPikafishAnalysis({ multiPv: 1 });
       if (/^[a-i][0-9][a-i][0-9]$/.test(uciMove)) { const iccs = engineMoveToICCS(uciMove); move = { from: fromICCS(iccs.slice(0, 2)), to: fromICCS(iccs.slice(2, 4)) }; }
       $('#ai-output').textContent = 'Pikafish 引擎建议，着法已通过本地规则校验。';
-    } else {
+    } else if (!aiVsAi) {
       const result = await requestSuggestion({ board: state.board, side: state.side, moves: legalMoves(state.board, state.side), settings: state.settings, strength: 'max', signal: controller.signal });
       move = result.move;
       if (result.provider === 'external') $('#ai-output').textContent = `AI 分析：${result.explanation}（外部模型建议，棋力未认证）`;
       else $('#ai-output').textContent = `AI 建议：${result.explanation}`;
     }
   } catch (error) {
+    if (aiVsAi) {
+      state.aiVsAiRunning = false;
+      $('#ai-output').textContent = `AI 对弈已停止：${error.message}`;
+    } else
     if (state.settings.apiUrl && state.settings.apiKey && state.settings.model) {
       move = await chooseLocalMoveAsync(state.board, state.side, 'max');
       $('#ai-output').textContent = `AI 服务暂不可用，已降级到本地基础策略：${error.name === 'AbortError' ? '请求超时' : error.message}`;
@@ -793,12 +1006,18 @@ async function scheduleAiMove() {
     }
   } finally { clearTimeout(timeout); }
   state.aiBusy = false;
+  if (aiVsAi && !state.aiVsAiRunning) { renderPlayBoard(); return; }
   if (move && legalMoves(state.board, state.side).some((candidate) => sameMove(candidate, move))) await playMove(move);
-  else { renderPlayBoard(); toast('AI 未能提供合法着法'); }
+  else {
+    if (aiVsAi) { state.aiVsAiRunning = false; $('#ai-output').textContent = 'AI 对弈已停止：引擎未返回合法着法。'; }
+    renderPlayBoard(); toast('AI 未能提供合法着法');
+  }
 }
 
 function undoMove() {
   if (!state.history.length || state.aiBusy) return;
+  hideCheckmateAnimation();
+  if ($('#mode-select').value === 'ai-vs-ai') { state.aiVsAiRunning = false; clearTimeout(state.aiMoveTimer); state.aiMoveTimer = null; }
   let count = 1;
   if ($('#mode-select').value === 'ai' && state.history.at(-1).previousSide !== $('#side-select').value && state.history.length > 1) count = 2;
   while (count-- && state.history.length) {
@@ -822,7 +1041,7 @@ function installEnginePanel() {
   const panel = document.createElement('section');
   panel.id = 'pikafish-panel';
   panel.className = 'panel engine-panel';
-  panel.innerHTML = `<div class="panel-title"><div><h2>Pikafish 引擎</h2><span id="pikafish-status" class="muted" role="status">正在准备本地引擎…</span></div><span class="engine-badge">WASM</span></div><div class="engine-toolbar"><button id="pikafish-start" class="secondary-button">正在加载…</button><button id="pikafish-analyze" class="primary-button" disabled>分析局面</button><label class="engine-depth"><span>深度</span><select id="pikafish-depth" aria-label="搜索深度"><option value="12">快速 · 12 层</option><option value="16" selected>中速 · 16 层</option><option value="20">标准 · 20 层</option><option value="30">最强 · 30 层</option></select></label></div><div class="engine-game-options"><label class="engine-game-option">对弈模式<select id="mode-select"><option value="local">本地双人</option><option value="ai" selected>用户 vs AI</option></select></label><label class="engine-game-option">你执哪方<select id="side-select"><option value="red">红方</option><option value="black">黑方</option></select></label></div><div id="pikafish-lines" class="engine-lines"></div><p class="engine-footnote">默认使用 Pikafish 单主线搜索、可用 CPU 线程（最多 8）和 256 MiB 哈希表；最强档搜索至 30 层。首次加载需下载 NNUE 网络。</p>`;
+  panel.innerHTML = `<div class="panel-title"><div><h2>Pikafish 引擎</h2><span id="pikafish-status" class="muted" role="status">正在准备本地引擎…</span></div><span class="engine-badge">WASM</span></div><div class="engine-toolbar"><button id="pikafish-start" class="secondary-button">正在加载…</button><button id="pikafish-analyze" class="primary-button" disabled>分析局面</button><label class="engine-depth"><span>搜索</span><select id="pikafish-depth" aria-label="搜索方式"><optgroup label="按深度"><option value="12">快速 · 12 层</option><option value="16" selected>中速 · 16 层</option><option value="20">标准 · 20 层</option><option value="30">最强 · 30 层</option></optgroup><optgroup label="按时间"><option value="time:3000">限时 · 3 秒</option><option value="time:5000">限时 · 5 秒</option><option value="time:7000">限时 · 7 秒</option><option value="time:10000">限时 · 10 秒</option><option value="time:30000">限时 · 30 秒</option></optgroup></select></label></div><div class="engine-game-options"><label class="engine-game-option">对弈模式<select id="mode-select"><option value="local">本地双人</option><option value="ai" selected>用户 vs AI</option><option value="ai-vs-ai">AI vs AI</option></select></label><label class="engine-game-option">你执哪方<select id="side-select"><option value="red">红方</option><option value="black">黑方</option></select></label></div><div id="pikafish-lines" class="engine-lines"></div><p class="engine-footnote">引擎按设备自动分配最多 32 个 CPU 线程。旧版引擎使用最多 256 MiB 哈希；新版 2 GiB WASM 引擎按设备内存自动使用 64–1280 MiB。首次运行会下载引擎程序、WASM 和棋力网络，并显示下载进度。</p>`;
   $('.game-sidebar').prepend(panel);
   renderEngineLines();
 }
@@ -844,8 +1063,8 @@ function renderEngineLines() {
       const rows = document.createElement('div'); rows.className = 'engine-side-lines';
       const analysisSide = analysis.side ?? side;
       for (const { line, move, notation: moveNotation } of engineCandidateMoves(analysis.lines, analysis.board, analysisSide)) {
-        const row = document.createElement(current ? 'button' : 'div');
-        if (current) row.type = 'button';
+        const row = document.createElement(current && $('#mode-select').value !== 'ai-vs-ai' ? 'button' : 'div');
+        if (row instanceof HTMLButtonElement) row.type = 'button';
         row.className = `engine-line${current ? '' : ' historical'}`;
         const notation = document.createElement('strong'); notation.textContent = moveNotation;
         const score = document.createElement('span');
@@ -853,7 +1072,7 @@ function renderEngineLines() {
         const depth = document.createElement('small'); depth.textContent = `深度 ${line.depth}`;
         row.append(notation, score, depth);
         if (current) row.addEventListener('click', async () => {
-          if (state.gameOver || state.aiBusy || analysis.position !== positionKey(state.board, state.side) || !legalMoves(state.board, analysisSide).some((candidate) => sameMove(candidate, move))) return;
+          if ($('#mode-select').value === 'ai-vs-ai' || state.gameOver || state.aiBusy || analysis.position !== positionKey(state.board, state.side) || !legalMoves(state.board, analysisSide).some((candidate) => sameMove(candidate, move))) return;
           await playMove(move);
         });
         rows.append(row);
@@ -870,6 +1089,15 @@ function renderEngineLines() {
   }
 }
 
+function getPikafishSearchConfig(value) {
+  if (String(value).startsWith('time:')) {
+    const moveTime = Number(String(value).slice(5));
+    return { moveTime, label: `${moveTime / 1000}秒`, description: `每步限时 ${moveTime / 1000} 秒搜索` };
+  }
+  const depth = Number(value);
+  return { depth, label: `${depth}层`, description: `${depth} 层深度搜索` };
+}
+
 async function requestPikafishAnalysis({ multiPv = 1 } = {}) {
   if (!state.pikafish?.ready || state.gameOver) return null;
   const board = [...state.board]; const side = state.side; const position = positionKey(board, side);
@@ -880,21 +1108,21 @@ async function requestPikafishAnalysis({ multiPv = 1 } = {}) {
       previous.status = '局面更新，保留已得结果';
     }
   }
-  const depth = Number($('#pikafish-depth').value);
-  const task = state.pikafish.analyze(board, side, { depth, multiPv });
+  const searchConfig = getPikafishSearchConfig($('#pikafish-depth').value);
+  const task = state.pikafish.analyze(board, side, { ...searchConfig, multiPv });
   const analysisId = task.analysisId;
-  const analysis = { analysisId, board, side, position, ply: state.history.length, depth, lines: [], status: '分析中' };
+  const analysis = { analysisId, board, side, position, ply: state.history.length, ...searchConfig, lines: [], status: '分析中' };
   state.engineAnalyses[side] = analysis;
   state.engineAnalysisTarget = { analysisId, side };
   state.engineAnalysisTask = task;
   renderEngineLines();
   const analyzeButton = $('#pikafish-analyze');
   if (analyzeButton) { analyzeButton.disabled = true; analyzeButton.textContent = '分析中…'; }
-  $('#pikafish-status').textContent = `自动分析 · ${names[side]}行棋`;
+  $('#pikafish-status').textContent = `自动分析 · ${names[side]}行棋 · ${searchConfig.label}`;
   try {
     const bestmove = await task;
     if (state.engineAnalyses[side]?.analysisId === analysisId && bestmove && bestmove !== '(none)' && !engineCandidateMoves(analysis.lines, board, side).length) {
-      const fallback = { multipv: 1, depth, score: null, pv: [bestmove] };
+      const fallback = { multipv: 1, depth: analysis.lines[0]?.depth ?? searchConfig.depth ?? 0, score: null, pv: [bestmove] };
       if (engineCandidateMoves([fallback], board, side).length) analysis.lines = [fallback];
     }
     if (state.engineAnalyses[side]?.analysisId === analysisId && analysis.status === '分析中') analysis.status = '分析完成';
@@ -922,7 +1150,10 @@ async function startPikafish({ automatic = false } = {}) {
   const engine = new PikafishEngine((message) => {
     updateEngineDownloadNotice(message);
     if (message.type === 'progress') {
-      status.textContent = message.total ? `下载 NNUE ${Math.round(message.loaded / message.total * 100)}%` : `下载 NNUE ${(message.loaded / 1048576).toFixed(1)} MiB`;
+      const assetName = { js: '引擎程序', wasm: 'WebAssembly', nnue: '棋力网络' }[message.asset] ?? '引擎资源';
+      status.textContent = message.total
+        ? `下载${assetName} ${Math.round(message.loaded / message.total * 100)}%`
+        : `下载${assetName} ${(message.loaded / 1048576).toFixed(1)} MiB`;
     } else if (message.type === 'status') status.textContent = message.text;
     else if (message.type === 'analysis') {
       const analysis = state.engineAnalyses[message.side];
@@ -941,11 +1172,19 @@ async function startPikafish({ automatic = false } = {}) {
     status.textContent = engine.version?.version ? `已就绪 · Pikafish ${engine.version.version}` : '已就绪 · Pikafish WebAssembly';
     $('#pikafish-analyze').disabled = false;
     button.textContent = '引擎已加载';
-    void requestPikafishAnalysis();
+    renderPlayBoard();
+    if ($('#mode-select').value === 'ai-vs-ai') {
+      if (state.aiVsAiRunning) void scheduleAiMove();
+    } else void requestPikafishAnalysis();
   } catch (error) {
     finishEngineDownloadNotice(error);
     engine.close(); button.disabled = false; button.textContent = '重试加载';
     status.textContent = `加载失败：${error.message}`;
+    if ($('#mode-select').value === 'ai-vs-ai' && state.aiVsAiRunning) {
+      state.aiVsAiRunning = false;
+      $('#ai-output').textContent = `AI 对弈无法开始：${error.message}`;
+      renderPlayBoard();
+    }
     if (!automatic) toast('Pikafish 加载失败，请查看引擎状态中的具体原因');
   }
 }
@@ -988,17 +1227,29 @@ function bindEvents() {
   });
   $('#study-flip').addEventListener('click', () => { state.studyFlipped = !state.studyFlipped; renderStudyBoard(); });
   $('#play-flip').addEventListener('click', () => { state.playFlipped = !state.playFlipped; renderPlayBoard(); });
+  $('#save-record-open').addEventListener('click', openSaveRecordDialog);
+  $('#save-record-folder').addEventListener('change', (event) => {
+    const newFolder = event.target.value === 'new';
+    $('#save-record-new-folder-wrap').hidden = !newFolder;
+    if (newFolder) $('#save-record-new-folder').focus();
+  });
+  $('#save-record-confirm').addEventListener('click', saveCurrentGameRecord);
   $('#undo-button').addEventListener('click', undoMove);
+  $('#ai-vs-ai-toggle').addEventListener('click', toggleAiVsAi);
   $('#restart-button').addEventListener('click', () => {
+    hideCheckmateAnimation();
+    clearTimeout(state.aiMoveTimer); state.aiMoveTimer = null;
+    state.aiVsAiRunning = $('#mode-select').value === 'ai-vs-ai';
     resetEngineAnalyses(); state.board = initialBoard(); state.side = RED; state.history = []; state.gameOver = false; state.adjudication = null; state.repetitionPending = null; state.selectedSquare = null; renderPlayBoard(); saveGame();
-    if ($('#mode-select').value === 'ai' && $('#side-select').value === 'black') scheduleAiMove();
+    if ($('#mode-select').value === 'ai-vs-ai') queueAiMove();
+    else if ($('#mode-select').value === 'ai' && $('#side-select').value === 'black') scheduleAiMove();
     else if (state.pikafish?.ready) void requestPikafishAnalysis();
   });
-  $('#mode-select').addEventListener('change', () => { resetEngineAnalyses(); state.board = initialBoard(); state.side = RED; state.history = []; state.gameOver = false; state.adjudication = null; state.repetitionPending = null; renderPlayBoard(); saveGame(); if ($('#mode-select').value === 'ai' && $('#side-select').value === 'black') scheduleAiMove(); else if (state.pikafish?.ready) void requestPikafishAnalysis(); });
-  $('#side-select').addEventListener('change', () => { if ($('#mode-select').value === 'ai') { resetEngineAnalyses(); state.board = initialBoard(); state.side = RED; state.history = []; state.gameOver = false; state.adjudication = null; state.repetitionPending = null; renderPlayBoard(); saveGame(); if ($('#side-select').value === 'black') scheduleAiMove(); else if (state.pikafish?.ready) void requestPikafishAnalysis(); } });
+  $('#mode-select').addEventListener('change', () => { hideCheckmateAnimation(); clearTimeout(state.aiMoveTimer); state.aiMoveTimer = null; state.aiVsAiRunning = $('#mode-select').value === 'ai-vs-ai'; resetEngineAnalyses(); state.board = initialBoard(); state.side = RED; state.history = []; state.gameOver = false; state.adjudication = null; state.repetitionPending = null; renderPlayBoard(); saveGame(); if ($('#mode-select').value === 'ai-vs-ai') queueAiMove(); else if ($('#mode-select').value === 'ai' && $('#side-select').value === 'black') scheduleAiMove(); else if (state.pikafish?.ready) void requestPikafishAnalysis(); });
+  $('#side-select').addEventListener('change', () => { if ($('#mode-select').value === 'ai') { hideCheckmateAnimation(); resetEngineAnalyses(); state.board = initialBoard(); state.side = RED; state.history = []; state.gameOver = false; state.adjudication = null; state.repetitionPending = null; renderPlayBoard(); saveGame(); if ($('#side-select').value === 'black') scheduleAiMove(); else if (state.pikafish?.ready) void requestPikafishAnalysis(); } });
   $('#pikafish-start').addEventListener('click', startPikafish);
   $('#pikafish-analyze').addEventListener('click', analyzePikafish);
-  $('#pikafish-depth').addEventListener('change', () => { if (state.pikafish?.ready) void requestPikafishAnalysis(); });
+  $('#pikafish-depth').addEventListener('change', () => { renderPlayBoard(); if (state.pikafish?.ready) void requestPikafishAnalysis(); });
   $('#settings-button').addEventListener('click', openSettings);
   $('#clear-key').addEventListener('click', async () => { state.settings = { ...state.settings, apiKey: '' }; await saveSettings(state.settings); $('#api-key').value = ''; toast('本机 API 密钥已清除'); });
   $('#clear-data').addEventListener('click', async () => {

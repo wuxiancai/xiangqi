@@ -12,7 +12,7 @@
 python3 scripts/deploy.py
 ```
 
-Linux（必须有 systemd）：`sudo python3 scripts/deploy.py`。macOS 使用 launchd，Windows 使用任务计划程序。默认从端口 `8000` 开始；若端口被占用，自动递增检查 `8001`、`8002` 等端口。可通过 `PORT=8080` 指定其他起始端口，仍会在占用时向后顺延。部署后浏览器访问部署脚本显示的端口。停止并禁用自启动：`python3 scripts/stop.py`；Linux 用 `sudo python3 scripts/stop.py`。停止不删除服务配置或项目文件；再次执行部署会重新启用并启动。ES modules、IndexedDB 和 Service Worker 需要 HTTP(S) 页面，直接用 `file://` 打开不受支持。
+Linux（必须有 systemd）：`sudo python3 scripts/deploy.py`。macOS 使用 launchd，Windows 使用任务计划程序。默认从端口 `8000` 开始；若端口被占用，自动递增检查 `8001`、`8002` 等端口。可通过 `PORT=8080` 指定其他起始端口，仍会在占用时向后顺延。服务端口是 HTTP 上游端口；公网部署请配置带有效 TLS 证书的 HTTPS 域名及 Nginx/Caddy 等反向代理。Pikafish 多线程 WASM 需要浏览器安全上下文，并要求页面响应含 `Cross-Origin-Opener-Policy: same-origin` 与 `Cross-Origin-Embedder-Policy: require-corp`；项目 Python 服务已发送这些头，反向代理须保留或添加它们。公网 IP 直连 HTTP 不能启动 Pikafish；`http://localhost` 仅适用于本机开发。部署后通过 HTTPS 域名访问。停止并禁用自启动：`python3 scripts/stop.py`；Linux 用 `sudo python3 scripts/stop.py`。停止不删除服务配置或项目文件；再次执行部署会重新启用并启动。ES modules、IndexedDB 和 Service Worker 需要 HTTP(S) 页面，直接用 `file://` 打开不受支持。
 
 Linux systemd 服务模板位于 `deploy/xiangqi.service`，部署脚本会按上传目录、运行用户和端口生成服务单元。`scripts/run_server.py` 可用于本机临时运行，但生产部署应使用 `deploy.py`，以确保服务受 systemd/launchd/任务计划管理。
 
@@ -36,7 +36,8 @@ npm test
 - 内置库当前收录 36 盘现代大师对局和 40 盘残局，共 76 盘，着法均通过规则校验。现代/残局数据源为 [Chinese Chess Practical Dataset（CC BY 4.0）](https://github.com/Yvonne761/Chinese-Chess-Practical-Dataset)，来源、版本和归属见 `data/ATTRIBUTION.md`。古谱《梅花谱》《橘中秘》《适情雅趣》尚未录入；100 盘首版目标未达成，不应将当前版本视为完整内容交付。
 - 首版导入仅支持 `xiangqi-study/v1` JSON（最大 2 MiB）；XQF、PGN、ICCS 文本解析仍延后。
 - 内置 AI 棋力未经认证；API 模型强度无法与引擎等级等同。API 密钥存于当前浏览器 IndexedDB，浏览器直连服务商存在密钥暴露与 CORS 限制。
+- 自托管静态文件可由 HTTPS 静态站点托管；首版无后端进程，因此无需 systemd 服务。
+
 ## 停止服务
 
 在 Linux 或 macOS 项目目录执行 `./stop.sh`。脚本会停止并禁用对应的 systemd/launchd 服务，再检查并停止由本项目 `app_server.py` 或 `run_server.py` 直接启动的残留进程。Linux 若通过 systemd 部署，会在需要时调用 `sudo`。Windows 请运行 `python scripts/stop.py`。
-- 自托管静态文件可由 HTTPS 静态站点托管；首版无后端进程，因此无需 systemd 服务。

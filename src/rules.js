@@ -190,10 +190,11 @@ export const sameMove = (left, right) => left?.from === right?.from && left?.to 
 
 export function validateAndReplay(record) {
   if (!record || record.schema !== 'xiangqi-study/v1') throw new Error('棋谱 schema 必须为 xiangqi-study/v1');
-  const allowedKeys = ['schema', 'id', 'title', 'category', 'players', 'result', 'source', 'initialPosition', 'moves', 'annotations', 'tags', 'userImported'];
+  const allowedKeys = ['schema', 'id', 'title', 'category', 'players', 'result', 'source', 'initialPosition', 'moves', 'annotations', 'tags', 'userImported', 'folder'];
   const unknownKeys = Object.keys(record).filter((key) => !allowedKeys.includes(key));
   if (unknownKeys.length) throw new Error(`棋谱包含未知字段：${unknownKeys.join('、')}`);
   if (record.userImported !== undefined && typeof record.userImported !== 'boolean') throw new Error('userImported 必须是布尔值');
+  if (record.folder !== undefined && (typeof record.folder !== 'string' || !record.folder.trim() || record.folder.length > 50)) throw new Error('folder 必须是 1–50 个字符的棋谱夹名称');
   if (typeof record.id !== 'string' || !record.id.trim()) throw new Error('棋谱缺少 id');
   if (typeof record.title !== 'string' || !record.title.trim()) throw new Error('棋谱缺少标题');
   if (!Array.isArray(record.category) || !record.category.length) throw new Error('棋谱至少需要一个分类');
