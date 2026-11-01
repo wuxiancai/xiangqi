@@ -18,7 +18,10 @@ def main():
     parser.add_argument("--port", type=int, default=int(PORT))
     os.environ["PORT"] = str(parser.parse_args().port)
     if not PYTHON.exists():
-        venv.EnvBuilder(with_pip=False).create(ENV)
+        # A copied or interrupted venv can leave a dangling interpreter link
+        # (for example, one pointing to the machine that created the archive).
+        # Rebuild the disposable environment instead of copying over stale links.
+        venv.EnvBuilder(with_pip=False, clear=ENV.exists()).create(ENV)
     os.execv(str(PYTHON), [str(PYTHON), str(ROOT / "scripts" / "app_server.py")])
 
 

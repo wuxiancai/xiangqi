@@ -368,3 +368,9 @@
 
 - 棋盘输入此前在检查对弈模式与当前行棋方之前，统一因 `state.aiBusy` 拒绝所有点击；用户轮到自己时若 AI 搜索状态未及时释放，也会无法选子或落子。现在只在终局或 AI 对弈模式拦截棋盘点击，用户 vs AI 仍通过行棋方检查限制 AI 回合。
 - 线上更新 `src/app.js`，模块查询版本升至 fallback-3，Service Worker 缓存升至 v106 并同步引擎模块清单。已完成 JavaScript 语法和差异空白检查；需用户在更新后的页面确认实际落子。
+
+
+## 2026-11-01 修复部署报告成功但 8002 未监听
+
+- systemd 日志显示项目 `.venv/bin/python3` 是从 macOS 环境带来的失效符号链接，Linux 的 `venv.EnvBuilder` 在原目录覆盖该链接失败，服务因此以 `FileNotFoundError` 退出。`run_server.py` 现在在虚拟环境缺失/损坏时清理并重建；Linux 部署脚本等待 systemd 服务进入 active 且本机端口可连接后才报告成功，超时打印服务状态并返回失败。
+- 已在云服务器重建环境并启动 `xiangqi.service`；核实 `ss` 与 `lsof` 均显示 `0.0.0.0:8002` 正在监听，`curl http://127.0.0.1:8002/` 返回 HTTP 200。

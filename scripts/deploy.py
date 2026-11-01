@@ -8,6 +8,7 @@ import shutil
 import socket
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 
@@ -34,8 +35,8 @@ def validate_port():
         raise SystemExit("PORT 必须是 1–65535 范围内的整数。")
     for candidate in range(port, 65536):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
-            # Match HTTPServer reuse semantics so Linux TIME_WAIT sockets do not
-            # make a stopped service port look occupied during deployment.
+            # Match HTTPServer's reuse policy so Linux TIME_WAIT sockets do not
+            # make a stopped service's port look occupied during deployment.
             if platform.system() != "Windows":
                 probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             try:
@@ -60,6 +61,19 @@ def deploy_linux():
     Path(f"/etc/systemd/system/{SERVICE}.service").write_text(unit, encoding="utf-8")
     run(["systemctl", "daemon-reload"])
     run(["systemctl", "enable", "--now", f"{SERVICE}.service"])
+    deadline = time.monotonic() + 10
+    while time.monotonic() < deadline:
+        active = subprocess.run(["systemctl", "is-active", "--quiet", f"{SERVICE}.service"], check=False).returncode == 0
+        if active:
+            try:
+                with socket.create_connection(("127.0.0.1", int(PORT)), timeout=0.5):
+                    break
+            except OSError:
+                pass
+        time.sleep(0.25)
+    else:
+        subprocess.run(["systemctl", "status", "--no-pager", "-l", f"{SERVICE}.service"], check=False)
+        raise SystemExit(f"{SERVICE}.service 未能在 10 秒内监听 127.0.0.1:{PORT}；请查看 systemd 日志。")
     print(f"已通过 systemd 部署并启动；端口 {PORT}，服务 {SERVICE}.service")
 
 
@@ -109,7 +123,7 @@ def main():
         deploy_windows()
     else:
         raise SystemExit(f"不支持的操作系统：{system}")
-    print(f"浏览器访问 http://<服务器地址>:{PORT}")
+    print(f"应用 HTTP 上游监听 0.0.0.0:{PORT}；公网请通过 HTTPS 反向代理访问（Pikafish 需要安全上下文）")
 
 
 if __name__ == "__main__":
