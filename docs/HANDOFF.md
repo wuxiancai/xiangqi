@@ -330,3 +330,10 @@
 - Chrome 实机控制台确认线上入口因静态导入 `engine/pikafish/engine.js` 语法错误而无法执行：`Private field '#startWorker' must be declared in an enclosing class`。线上该文件在 `#startWorker` 调用/声明附近仍是损坏旧版本，含类外私有字段调用及错误的括号/未定义 `cacheVersion`，导致所有应用事件都未绑定。
 - 当前工作区 `engine.js` 已修正私有方法/Worker 初始化语法并保留版本下载进度回调。提交时需部署该文件；仅更新 app.js 和 Service Worker 不够。通过 `node --check` 验证当前修复文件。
 - 线上 HTTP IP 还导致 Chrome 忽略 COOP 响应头（不可信 origin），所以 Pikafish 多线程引擎仍需 HTTPS 域名访问并保留 COOP/COEP 响应头；这与页面按钮事件失效是两个独立问题。
+
+
+## 2026-11-01 诊断 chess.kartso.cn HTTPS 页面空白
+
+- Chrome 控制台复现启动错误：`/src/app.js:7` 从 `./importer.js` 导入 `normalizeLegacyImportedRecord`，但服务器上的 `/src/importer.js` 未导出该函数；ES Module 链接失败后，棋盘、棋谱库和事件初始化均未执行，页面显示空棋盘及 0 盘棋谱。
+- 远端文件时间佐证版本不一致：`app.js` 与 `service-worker.js` Last-Modified 为 2026-11-01 02:11:54 UTC；`importer.js` 仍是 2026-10-18 00:09:10 UTC。本机 `src/importer.js` 已含该导出。应将 app.js 与 importer.js 作为同一版本一起部署，并确保 Service Worker 所引用的应用文件来自同一次发布。
+- HTTPS 本身可握手，Let's Encrypt 证书 SAN 覆盖 `*.kartso.cn`，有效期 2026-11-01 至 2027-01-30；首页返回 200 且含 COOP/COEP/CORP。普通 HTTP 域名请求另返回阿里云 ICP 未备案拦截页 403，不是本次 HTTPS 页面空白的主因。
